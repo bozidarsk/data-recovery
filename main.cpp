@@ -1,6 +1,33 @@
 #include <iostream>
 #include <fstream>
 
+bool isAsciiLetter(char x) { return (x >= 'a' && x <= 'z') || (x >= 'A' && x <= 'Z'); }
+
+void memcpy(void *dest, const void *src, size_t size) 
+{
+	if (!dest || !src)
+		return;
+
+	for (size_t i = 0; i < size; i++)
+		((char*)dest)[i] = ((char*)src)[i];
+}
+
+void corrupt(char *text, int percentage) 
+{
+	if (!text || percentage < 0 || percentage > 100)
+		return;
+
+	for (int i = 0; text[i] != 0; i++) 
+	{
+		if (rand() % 100 >= percentage || !isAsciiLetter(text[i]))
+			continue;
+
+		int bit = rand() % 6;
+
+		text[i] ^= 1 << bit;
+	}
+}
+
 int getstreamsize(std::ifstream &file, size_t offset = 50) 
 {
 	if (!file.good() || offset == 0)
@@ -79,6 +106,15 @@ int main()
 	file.read(text, textLength);
 	text[textLength] = 0;
 
-	delete[] text;
+
+	char *corruptedText = new char[textLength + 1];
+	memcpy(corruptedText, text, textLength + 1);
+
+	double corruptionRate;
+	std::cin >> corruptionRate;
+
+	corrupt(corruptedText, corruptionRate * 100.0);
+
+	delete[] text, corruptedText;
 	return 0;
 }
