@@ -6,6 +6,8 @@ int getstreamsize(std::ifstream &file, size_t offset = 50)
 	if (!file.good() || offset == 0)
 		return -1;
 
+	size_t oldOffset = file.tellg();
+
 	file.seekg(offset);
 	int a = file.peek();
 	file.seekg(offset + 1);
@@ -13,6 +15,7 @@ int getstreamsize(std::ifstream &file, size_t offset = 50)
 
 	bool outside = a == EOF && b == EOF;
 	size_t step = offset;
+	int size;
 
 	while (true) 
 	{
@@ -21,8 +24,11 @@ int getstreamsize(std::ifstream &file, size_t offset = 50)
 		file.seekg(offset + 1);
 		b = file.peek();
 
-		if (a != EOF && b == EOF)
-			return offset + 1;
+		if (a != EOF && b == EOF) 
+		{
+			size = offset + 1;
+			break;
+		}
 		else if (a == EOF && b == EOF) 
 		{
 			offset -= step;
@@ -45,8 +51,15 @@ int getstreamsize(std::ifstream &file, size_t offset = 50)
 
 			outside = false;
 		}
-		else return -1;
+		else 
+		{
+			size = -1;
+			break;
+		}
 	}
+
+	file.seekg(oldOffset);
+	return size;
 }
 
 int main() 
@@ -55,7 +68,6 @@ int main()
 	std::getline(std::cin, path);
 
 	std::ifstream file(path);
-
 	if (!file.good()) 
 	{
 		std::cout << "failed to open file\n";
