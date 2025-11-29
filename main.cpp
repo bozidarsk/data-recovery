@@ -209,7 +209,7 @@ int charModificationState(const char *text, const char *corruptedText, char *wor
 
 	std::cout << "\n\nChoose what to change the selected character to: \n0) Cancel\n";
 
-	char x = corruptedText[wordStart + charIndex - 1];
+	char x = workingText[wordStart + charIndex - 1];
 	for (int i = 0; i < 6; i++)
 		std::cout << (i + 1) << ") " << (char)(x ^ (1 << i)) << '\n';
 
