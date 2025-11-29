@@ -1,6 +1,29 @@
 #include <iostream>
 #include <fstream>
 
+#ifdef linux
+#include <unistd.h>
+void sleep(int time) { usleep(time * 1000); }
+#elifdef _WIN32
+#include <windows.h>
+void sleep(int time) { Sleep(time); }
+#endif
+
+const char 
+	// *TTY_CLEAR = "\x1bH[\x1b[2J",
+	*TTY_CLEAR = "",
+	*TTY_RED = "\x1b[31;49m",
+	*TTY_GREEN = "\x1b[32;49m",
+	*TTY_DEFAULT = "\x1b[39;49m"
+;
+
+const int 
+	STATE_WORD_SELECTION = 0,
+	STATE_CHAR_SELECTION = 1,
+	STATE_CHAR_MODIFICATINO = 2,
+	STATE_COUNT = 3
+;
+
 bool isAsciiLetter(char x) { return (x >= 'a' && x <= 'z') || (x >= 'A' && x <= 'Z'); }
 
 void memcpy(void *dest, const void *src, size_t size) 
@@ -89,6 +112,108 @@ int getstreamsize(std::ifstream &file, size_t offset = 50)
 	return size;
 }
 
+int wordSelectionState(const char *text, const char *corruptedText, int textLength, int *wordStart, int *wordLength) 
+{
+	std::cout << TTY_CLEAR << "\n";
+
+	for (int i = 0; i < textLength; i++)
+		std::cout << ((text[i] == corruptedText[i]) ? TTY_DEFAULT : TTY_RED) << corruptedText[i];
+
+	int word;
+	std::cout << "\n\nEnter the number of the word you wish to inspect: ";
+	std::cin >> word;
+
+	if (word < 1)
+		return EINVAL;
+
+	word--;
+	*wordStart = -1;
+
+	// TODO: better word detection
+	for (int i = 0; i < textLength; i++) 
+	{
+		bool isSpace = corruptedText[i] == ' ';
+
+		if (isSpace)
+			word--;
+
+		if (word == 0 && isSpace) 
+		{
+			*wordStart = i;
+			continue;
+		}
+
+		if (word == -1 && isSpace) 
+		{
+			(*wordStart)++;
+			*wordLength = i - *wordStart;
+			return 0;
+		}
+	}
+
+	return EINVAL;
+}
+
+int charSelectionState(const char *text, const char *corruptedText, int textLength, int wordStart, int wordLength, int *charIndex) 
+{
+	std::cout << TTY_CLEAR << "\n";
+
+	for (int i = 0; i < textLength; i++)
+		std::cout << ((text[i] == corruptedText[i]) ? TTY_DEFAULT : TTY_RED) << corruptedText[i];
+
+	std::cout << "\nSelected word is: ";
+
+	for (int i = 0; i < wordLength; i++)
+		std::cout << corruptedText[wordStart + i];
+
+	std::cout << "\n\nEnter the number of the character in this word you wish to inspect (0 to cancel): ";
+	std::cin >> *charIndex;
+
+	if (!(*charIndex))
+		return ECANCELED;
+
+	return (*charIndex <= wordLength) ? 0 : EINVAL;
+}
+
+int charModificationState(const char *text, const char *corruptedText, int textLength, int wordStart, int wordLength, int charIndex, char *newChar) 
+{
+	std::cout << TTY_CLEAR << "\n";
+
+	for (int i = 0; i < textLength; i++)
+		std::cout << ((text[i] == corruptedText[i]) ? TTY_DEFAULT : TTY_RED) << corruptedText[i];
+
+	std::cout << "\nSelected word is: ";
+
+	for (int i = 0; i < wordLength; i++)
+		std::cout << corruptedText[wordStart + i];
+
+	std::cout << "\nSelected char is: ";
+
+	for (int i = 1; i < charIndex; i++)
+		std::cout << ' ';
+
+	std::cout << '^';
+
+	std::cout << "\n\nChoose what to change the selected character to: \n0) Cancel\n";
+
+	char x = corruptedText[wordStart + charIndex - 1];
+	for (int i = 0; i < 6; i++)
+		std::cout << (i + 1) << ") " << (char)(x ^ (1 << i)) << '\n';
+
+	int newCharIndex;
+	std::cout << "Your choice: ";
+	std::cin >> newCharIndex;
+
+	if (!newCharIndex)
+		return ECANCELED;
+
+	if (newCharIndex < 1 || newCharIndex > 6)
+		return EINVAL;
+
+	*newChar = (newCharIndex--) ? (x ^ (1 << newCharIndex)) : 0;
+	return 0;
+}
+
 int main() 
 {
 	std::string path;
@@ -114,6 +239,53 @@ int main()
 	std::cin >> corruptionRate;
 
 	corrupt(corruptedText, corruptionRate * 100.0);
+
+	srand(time(NULL) ^ (time_t)text);
+
+	int state = STATE_WORD_SELECTION;
+	int wordStart, wordLength, charIndex;
+	char newChar;
+	bool result;
+
+	for (;;) 
+	{
+		switch (state) 
+		{
+			case STATE_WORD_SELECTION:
+				switch (wordSelectionState(text, corruptedText, textLength, &wordStart, &wordLength)) 
+				{
+					case EINVAL:
+						std::cout << "invalid input\n";
+						continue;
+				}
+				break;
+			case STATE_CHAR_SELECTION:
+				switch (charSelectionState(text, corruptedText, textLength, wordStart, wordLength, &charIndex)) 
+				{
+					case EINVAL:
+						std::cout << "invalid input\n";
+						continue;
+					case ECANCELED:
+						state--;
+						continue;
+				}
+				break;
+			case STATE_CHAR_MODIFICATINO:
+				switch (charModificationState(text, corruptedText, textLength, wordStart, wordLength, charIndex, &newChar)) 
+				{
+					case EINVAL:
+						std::cout << "invalid input\n";
+						continue;
+					case ECANCELED:
+						state--;
+						continue;
+				}
+				break;
+		}
+
+		sleep(200);
+		state = (state + 1) % STATE_COUNT;
+	}
 
 	delete[] text, corruptedText;
 	return 0;
