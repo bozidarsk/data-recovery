@@ -338,7 +338,14 @@ void run(game_t &game)
 	}
 }
 
-int main() 
+void unload(game_t &game) 
+{
+	delete[] game.text;
+	delete[] game.corruptedText;
+	delete[] game.workingText;
+}
+
+game_t load() 
 {
 	std::string path;
 	std::cout << "path: ";
@@ -348,7 +355,7 @@ int main()
 	if (!file.good()) 
 	{
 		std::cout << "failed to open file '" << path << "'\n";
-		return 1;
+		return {0};
 	}
 
 	int textLength = getstreamsize(file);
@@ -366,14 +373,13 @@ int main()
 	if (corruptionRate < 0.0 || corruptionRate > 1.0) 
 	{
 		std::cout << "invalid input\n";
-		return 1;
+		return {0};
 	}
 
 	corrupt(corruptedText, corruptionRate * 100.0);
 
 	char *workingText = new char[textLength + 1];
 	memcpy(workingText, corruptedText, textLength + 1);
-
 
 	game_t game = 
 	{
@@ -385,12 +391,26 @@ int main()
 		.corruptedText = corruptedText,
 		.workingText = workingText
 	};
+
+	return game;
+}
+
+game_t load(std::string &path) 
+{
+	// TODO
+	return {0};
+}
+
+void save(std::string &path, game_t &game) 
+{
+	// TODO
+}
+
+int main() 
+{
+	game_t game = load();
 	run(game);
-
-
-	delete[] text;
-	delete[] corruptedText;
-	delete[] workingText;
+	unload(game);
 
 	return 0;
 }
