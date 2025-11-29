@@ -161,10 +161,10 @@ int charSelectionState(const char *text, const char *corruptedText, int textLeng
 	for (int i = 0; i < textLength; i++)
 		std::cout << ((text[i] == corruptedText[i]) ? TTY_DEFAULT : TTY_RED) << corruptedText[i];
 
-	std::cout << "\nSelected word is: ";
+	std::cout << TTY_DEFAULT << "\nSelected word is: ";
 
 	for (int i = 0; i < wordLength; i++)
-		std::cout << corruptedText[wordStart + i];
+		std::cout << ((text[wordStart + i] == corruptedText[wordStart + i]) ? TTY_DEFAULT : TTY_RED) << corruptedText[wordStart + i];
 
 	std::cout << "\n\nEnter the number of the character in this word you wish to inspect (0 to cancel): ";
 	std::cin >> *charIndex;
@@ -182,12 +182,12 @@ int charModificationState(const char *text, const char *corruptedText, int textL
 	for (int i = 0; i < textLength; i++)
 		std::cout << ((text[i] == corruptedText[i]) ? TTY_DEFAULT : TTY_RED) << corruptedText[i];
 
-	std::cout << "\nSelected word is: ";
+	std::cout << TTY_DEFAULT << "\nSelected word is: ";
 
 	for (int i = 0; i < wordLength; i++)
-		std::cout << corruptedText[wordStart + i];
+		std::cout << ((text[wordStart + i] == corruptedText[wordStart + i]) ? TTY_DEFAULT : TTY_RED) << corruptedText[wordStart + i];
 
-	std::cout << "\nSelected char is: ";
+	std::cout << TTY_DEFAULT << "\nSelected char is: ";
 
 	for (int i = 1; i < charIndex; i++)
 		std::cout << ' ';
