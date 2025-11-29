@@ -215,7 +215,7 @@ int charSelectionState(game_t &game)
 	if (!game.charIndex)
 		return ECANCELED;
 
-	return (gmae.charIndex >= 1 && game.charIndex <= game.wordLength) ? 0 : EINVAL;
+	return (game.charIndex >= 1 && game.charIndex <= game.wordLength) ? 0 : EINVAL;
 }
 
 int charModificationState(game_t &game) 
