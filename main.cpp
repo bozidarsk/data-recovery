@@ -135,6 +135,8 @@ void printText(const char *text, const char *corruptedText, char *workingText, i
 			std::cout << TTY_RED << workingText[i];
 		else if (workingText[i] == text[i])
 			std::cout << TTY_GREEN << workingText[i];
+		else if (workingText[i] != corruptedText[i] && workingText[i] != text[i])
+			std::cout << TTY_RED << workingText[i];
 		else
 			std::cout << TTY_DEFAULT << workingText[i];
 	}
