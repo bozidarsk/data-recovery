@@ -10,8 +10,7 @@ void sleep(int time) { Sleep(time); }
 #endif
 
 const char 
-	// *TTY_CLEAR = "\x1bH[\x1b[2J",
-	*TTY_CLEAR = "",
+	*TTY_CLEAR = "\x1b[H\x1b[2J",
 	*TTY_RED = "\x1b[31;49m",
 	*TTY_GREEN = "\x1b[32;49m",
 	*TTY_DEFAULT = "\x1b[39;49m"
@@ -139,8 +138,6 @@ void printText(const char *text, const char *corruptedText, char *workingText, i
 
 int wordSelectionState(const char *text, const char *corruptedText, char *workingText, int textLength, int *wordStart, int *wordLength) 
 {
-	std::cout << TTY_CLEAR << "\n";
-
 	printText(text, corruptedText, workingText, 0, textLength);
 
 	int word;
@@ -180,8 +177,6 @@ int wordSelectionState(const char *text, const char *corruptedText, char *workin
 
 int charSelectionState(const char *text, const char *corruptedText, char *workingText, int textLength, int wordStart, int wordLength, int *charIndex) 
 {
-	std::cout << TTY_CLEAR << "\n";
-
 	printText(text, corruptedText, workingText, 0, textLength);
 
 	std::cout << TTY_DEFAULT << "\nSelected word is: ";
@@ -199,8 +194,6 @@ int charSelectionState(const char *text, const char *corruptedText, char *workin
 
 int charModificationState(const char *text, const char *corruptedText, char *workingText, int textLength, int wordStart, int wordLength, int charIndex, char *newChar) 
 {
-	std::cout << TTY_CLEAR << "\n";
-
 	printText(text, corruptedText, workingText, 0, textLength);
 
 	std::cout << TTY_DEFAULT << "\nSelected word is: ";
@@ -267,6 +260,7 @@ int main()
 	memcpy(workingText, corruptedText, textLength + 1);
 
 	srand(time(NULL) ^ (time_t)text);
+	std::cout << TTY_CLEAR;
 
 	int state = STATE_WORD_SELECTION;
 	int wordStart, wordLength, charIndex;
@@ -281,6 +275,7 @@ int main()
 				switch (wordSelectionState(text, corruptedText, workingText, textLength, &wordStart, &wordLength)) 
 				{
 					case EINVAL:
+						std::cout << TTY_CLEAR;
 						std::cout << "invalid input\n";
 						continue;
 				}
@@ -289,9 +284,11 @@ int main()
 				switch (charSelectionState(text, corruptedText, workingText, textLength, wordStart, wordLength, &charIndex)) 
 				{
 					case EINVAL:
+						std::cout << TTY_CLEAR;
 						std::cout << "invalid input\n";
 						continue;
 					case ECANCELED:
+						std::cout << TTY_CLEAR;
 						state--;
 						continue;
 				}
@@ -300,9 +297,11 @@ int main()
 				switch (charModificationState(text, corruptedText, workingText, textLength, wordStart, wordLength, charIndex, &newChar)) 
 				{
 					case EINVAL:
+						std::cout << TTY_CLEAR;
 						std::cout << "invalid input\n";
 						continue;
 					case ECANCELED:
+						std::cout << TTY_CLEAR;
 						state--;
 						continue;
 				}
@@ -311,6 +310,7 @@ int main()
 
 		sleep(200);
 		state = (state + 1) % STATE_COUNT;
+		std::cout << TTY_CLEAR;
 	}
 
 	delete[] text, corruptedText, workingText;
