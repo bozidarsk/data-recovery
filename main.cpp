@@ -192,7 +192,7 @@ int charSelectionState(const char *text, const char *corruptedText, char *workin
 	return (*charIndex <= wordLength) ? 0 : EINVAL;
 }
 
-int charModificationState(const char *text, const char *corruptedText, char *workingText, int textLength, int wordStart, int wordLength, int charIndex, char *newChar) 
+int charModificationState(const char *text, const char *corruptedText, char *workingText, int textLength, int wordStart, int wordLength, int charIndex, int *mistakes) 
 {
 	printText(text, corruptedText, workingText, 0, textLength);
 
@@ -209,7 +209,7 @@ int charModificationState(const char *text, const char *corruptedText, char *wor
 
 	std::cout << "\n\nChoose what to change the selected character to: \n0) Cancel\n";
 
-	char x = workingText[wordStart + charIndex - 1];
+	char x = corruptedText[wordStart + charIndex - 1];
 	for (int i = 0; i < 6; i++)
 		std::cout << (i + 1) << ") " << (char)(x ^ (1 << i)) << '\n';
 
@@ -223,9 +223,11 @@ int charModificationState(const char *text, const char *corruptedText, char *wor
 	if (newCharIndex < 1 || newCharIndex > 6)
 		return EINVAL;
 
-	*newChar = (newCharIndex--) ? (x ^ (1 << newCharIndex)) : 0;
+	x = (newCharIndex--) ? (x ^ (1 << newCharIndex)) : 0;
+	workingText[wordStart + charIndex - 1] = x;
 
-	workingText[wordStart + charIndex - 1] = *newChar;
+	if (text[wordStart + charIndex - 1] != x)
+		(*mistakes)++;
 
 	return 0;
 }
@@ -264,12 +266,30 @@ int main()
 	std::cout << TTY_CLEAR;
 
 	int state = STATE_WORD_SELECTION;
-	int wordStart, wordLength, charIndex;
-	char newChar;
+	int wordStart, wordLength, charIndex, mistakes = 0;
 	bool result;
 
 	for (;;) 
 	{
+		bool winning = true;
+
+		for (int i = 0; i < textLength; i++) 
+		{
+			if (text[i] != workingText[i]) 
+			{
+				winning = false;
+				break;
+			}
+		}
+
+		if (winning) 
+		{
+			std::cout << TTY_CLEAR;
+			printText(text, corruptedText, workingText, 0, textLength);
+			std::cout << "\n\nCongratulations! You won! You made only " << mistakes << ((mistakes == 1) ? " mistake!\n" : " mistakes!\n");
+			break;
+		}
+
 		switch (state) 
 		{
 			case STATE_WORD_SELECTION:
@@ -295,7 +315,7 @@ int main()
 				}
 				break;
 			case STATE_CHAR_MODIFICATINO:
-				switch (charModificationState(text, corruptedText, workingText, textLength, wordStart, wordLength, charIndex, &newChar)) 
+				switch (charModificationState(text, corruptedText, workingText, textLength, wordStart, wordLength, charIndex, &mistakes)) 
 				{
 					case EINVAL:
 						std::cout << TTY_CLEAR;
