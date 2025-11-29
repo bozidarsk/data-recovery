@@ -17,6 +17,7 @@ const int
 
 bool isAsciiLetter(char x) { return (x >= 'a' && x <= 'z') || (x >= 'A' && x <= 'Z'); }
 bool isAsciiPrintable(char x) { return x > 0x1f && x < 0x7f; }
+bool isAsciiWhiteSpace(char x) { return x == ' ' || x == '\n' || x == '\r' || x == '\t' || x == '\0'; }
 
 void memcpy(void *dest, const void *src, size_t size) 
 {
@@ -144,6 +145,27 @@ void printText(const char *text, const char *corruptedText, char *workingText, i
 	std::cout << TTY_DEFAULT;
 }
 
+int splitWords(const char *str, int *indices, int *lengths) 
+{
+	if (!str || !indices || !lengths)
+		return 0;
+
+	int word = 0, index = 0;
+
+	while (str[index] != 0) 
+	{
+		for (; isAsciiWhiteSpace(str[index]); index++);
+		indices[word] = index;
+
+		for (; !isAsciiWhiteSpace(str[index]); index++);
+		lengths[word] = index - indices[word];
+
+		word++;
+	}
+
+	return word;
+}
+
 int wordSelectionState(const char *text, const char *corruptedText, char *workingText, int textLength, int *wordStart, int *wordLength) 
 {
 	printText(text, corruptedText, workingText, 0, textLength);
@@ -152,35 +174,20 @@ int wordSelectionState(const char *text, const char *corruptedText, char *workin
 	std::cout << "\n\nEnter the number of the word you wish to inspect: ";
 	std::cin >> word;
 
-	if (word < 1)
+	word--;
+
+	if (word < 0)
 		return EINVAL;
 
-	word--;
-	*wordStart = -1;
+	int indices[textLength], lengths[textLength];
 
-	// TODO: better word detection
-	for (int i = 0; i < textLength; i++) 
-	{
-		bool isSpace = workingText[i] == ' ';
+	if (word >= splitWords(workingText, indices, lengths))
+		return EINVAL;
 
-		if (isSpace)
-			word--;
+	*wordStart = indices[word];
+	*wordLength = lengths[word];
 
-		if (word == 0 && isSpace) 
-		{
-			*wordStart = i;
-			continue;
-		}
-
-		if (word == -1 && isSpace) 
-		{
-			(*wordStart)++;
-			*wordLength = i - *wordStart;
-			return 0;
-		}
-	}
-
-	return EINVAL;
+	return 0;
 }
 
 int charSelectionState(const char *text, const char *corruptedText, char *workingText, int textLength, int wordStart, int wordLength, int *charIndex) 
