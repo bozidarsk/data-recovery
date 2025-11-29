@@ -24,6 +24,7 @@ const int
 ;
 
 bool isAsciiLetter(char x) { return (x >= 'a' && x <= 'z') || (x >= 'A' && x <= 'Z'); }
+bool isAsciiPrintable(char x) { return x > 0x1f && x < 0x7f; }
 
 void memcpy(void *dest, const void *src, size_t size) 
 {
@@ -44,9 +45,15 @@ void corrupt(char *text, int percentage)
 		if (rand() % 100 >= percentage || !isAsciiLetter(text[i]))
 			continue;
 
-		int bit = rand() % 6;
+		char x;
 
-		text[i] ^= 1 << bit;
+		do 
+		{
+			int bit = rand() % 6;
+			x = text[i] ^ (1 << bit);
+		} while (!isAsciiPrintable(x) || x == ' ');
+
+		text[i] = x;
 	}
 }
 
@@ -224,6 +231,10 @@ int charModificationState(const char *text, const char *corruptedText, char *wor
 		return EINVAL;
 
 	x = (newCharIndex--) ? (x ^ (1 << newCharIndex)) : 0;
+
+	if (!isAsciiPrintable(x) || x == ' ')
+		return EAGAIN;
+
 	workingText[wordStart + charIndex - 1] = x;
 
 	if (text[wordStart + charIndex - 1] != x)
@@ -303,7 +314,7 @@ int main()
 				{
 					case EINVAL:
 						std::cout << TTY_CLEAR;
-						std::cout << "invalid input\n";
+						std::cout << "invalid input, try again\n\n";
 						continue;
 				}
 				break;
@@ -312,7 +323,7 @@ int main()
 				{
 					case EINVAL:
 						std::cout << TTY_CLEAR;
-						std::cout << "invalid input\n";
+						std::cout << "invalid input, try again\n\n";
 						continue;
 					case ECANCELED:
 						std::cout << TTY_CLEAR;
@@ -325,7 +336,11 @@ int main()
 				{
 					case EINVAL:
 						std::cout << TTY_CLEAR;
-						std::cout << "invalid input\n";
+						std::cout << "invalid input, try again\n\n";
+						continue;
+					case EAGAIN:
+						std::cout << TTY_CLEAR;
+						std::cout << "the selected character is non-printable or whitespace, try again\n\n";
 						continue;
 					case ECANCELED:
 						std::cout << TTY_CLEAR;
