@@ -233,12 +233,13 @@ int charModificationState(const char *text, const char *corruptedText, char *wor
 int main() 
 {
 	std::string path;
+	std::cout << "path: ";
 	std::getline(std::cin, path);
 
 	std::ifstream file(path);
 	if (!file.good()) 
 	{
-		std::cout << "failed to open file\n";
+		std::cout << "failed to open file '" << path << "'\n";
 		return 1;
 	}
 
@@ -247,11 +248,11 @@ int main()
 	file.read(text, textLength);
 	text[textLength] = 0;
 
-
 	char *corruptedText = new char[textLength + 1];
 	memcpy(corruptedText, text, textLength + 1);
 
 	double corruptionRate;
+	std::cout << "corruption rate (between 0 and 1): ";
 	std::cin >> corruptionRate;
 
 	corrupt(corruptedText, corruptionRate * 100.0);
