@@ -1,6 +1,17 @@
 #include <iostream>
 #include <fstream>
 
+typedef struct game_t 
+{
+	const unsigned int seed;
+	const int textLength;
+	int state, mistakes, wordStart, wordLength, charIndex;
+
+	const char *text;
+	const char *corruptedText;
+	char *workingText;
+} game_t;
+
 const char 
 	*TTY_CLEAR = "\x1b[H\x1b[2J",
 	*TTY_RED = "\x1b[31;49m",
@@ -26,28 +37,6 @@ void memcpy(void *dest, const void *src, size_t size)
 
 	for (size_t i = 0; i < size; i++)
 		((char*)dest)[i] = ((char*)src)[i];
-}
-
-void corrupt(char *text, int percentage) 
-{
-	if (!text || percentage < 0 || percentage > 100)
-		return;
-
-	for (int i = 0; text[i] != 0; i++) 
-	{
-		if (rand() % 100 >= percentage || !isAsciiLetter(text[i]))
-			continue;
-
-		char x;
-
-		do 
-		{
-			int bit = rand() % 6;
-			x = text[i] ^ (1 << bit);
-		} while (!isAsciiPrintable(x) || x == ' ');
-
-		text[i] = x;
-	}
 }
 
 int getstreamsize(std::ifstream &file, long long offset = 50) 
@@ -118,33 +107,6 @@ int getstreamsize(std::ifstream &file, long long offset = 50)
 	return size;
 }
 
-void printText(const char *text, const char *corruptedText, char *workingText, int index, int length) 
-{
-	if (!text || !corruptedText || !workingText || index < 0 || length <= 0)
-		return;
-
-	int max = index + length;
-
-	for (int i = index; i < max; i++) 
-	{
-		if (!text[i] || !corruptedText[i] || !workingText[i])
-			break;
-
-		if (workingText[i] == text[i] && workingText[i] == corruptedText[i])
-			std::cout << TTY_DEFAULT << workingText[i];
-		else if (workingText[i] == corruptedText[i])
-			std::cout << TTY_RED << workingText[i];
-		else if (workingText[i] == text[i])
-			std::cout << TTY_GREEN << workingText[i];
-		else if (workingText[i] != corruptedText[i] && workingText[i] != text[i])
-			std::cout << TTY_RED << workingText[i];
-		else
-			std::cout << TTY_DEFAULT << workingText[i];
-	}
-
-	std::cout << TTY_DEFAULT;
-}
-
 int splitWords(const char *str, int *indices, int *lengths) 
 {
 	if (!str || !indices || !lengths)
@@ -166,9 +128,58 @@ int splitWords(const char *str, int *indices, int *lengths)
 	return word;
 }
 
-int wordSelectionState(const char *text, const char *corruptedText, char *workingText, int textLength, int *wordStart, int *wordLength) 
+void corrupt(char *text, int percentage) 
 {
-	printText(text, corruptedText, workingText, 0, textLength);
+	if (!text || percentage < 0 || percentage > 100)
+		return;
+
+	for (int i = 0; text[i] != 0; i++) 
+	{
+		if (rand() % 100 >= percentage || !isAsciiLetter(text[i]))
+			continue;
+
+		char x;
+
+		do 
+		{
+			int bit = rand() % 6;
+			x = text[i] ^ (1 << bit);
+		} while (!isAsciiPrintable(x) || x == ' ');
+
+		text[i] = x;
+	}
+}
+
+void printText(game_t &game, int index, int length) 
+{
+	if (!game.text || !game.corruptedText || !game.workingText || index < 0 || length <= 0)
+		return;
+
+	int max = index + length;
+
+	for (int i = index; i < max; i++) 
+	{
+		if (!game.text[i] || !game.corruptedText[i] || !game.workingText[i])
+			break;
+
+		if (game.workingText[i] == game.text[i] && game.workingText[i] == game.corruptedText[i])
+			std::cout << TTY_DEFAULT << game.workingText[i];
+		else if (game.workingText[i] == game.corruptedText[i])
+			std::cout << TTY_RED << game.workingText[i];
+		else if (game.workingText[i] == game.text[i])
+			std::cout << TTY_GREEN << game.workingText[i];
+		else if (game.workingText[i] != game.corruptedText[i] && game.workingText[i] != game.text[i])
+			std::cout << TTY_RED << game.workingText[i];
+		else
+			std::cout << TTY_DEFAULT << game.workingText[i];
+	}
+
+	std::cout << TTY_DEFAULT;
+}
+
+int wordSelectionState(game_t &game) 
+{
+	printText(game, 0, game.textLength);
 
 	int word;
 	std::cout << "\n\nEnter the number of the word you wish to inspect: ";
@@ -179,52 +190,54 @@ int wordSelectionState(const char *text, const char *corruptedText, char *workin
 	if (word < 0)
 		return EINVAL;
 
-	int indices[textLength], lengths[textLength];
+	int indices[game.textLength], lengths[game.textLength];
 
-	if (word >= splitWords(workingText, indices, lengths))
+	if (word >= splitWords(game.workingText, indices, lengths))
 		return EINVAL;
 
-	*wordStart = indices[word];
-	*wordLength = lengths[word];
+	game.wordStart = indices[word];
+	game.wordLength = lengths[word];
 
 	return 0;
 }
 
-int charSelectionState(const char *text, const char *corruptedText, char *workingText, int textLength, int wordStart, int wordLength, int *charIndex) 
+int charSelectionState(game_t &game) 
 {
-	printText(text, corruptedText, workingText, 0, textLength);
+	printText(game, 0, game.textLength);
 
 	std::cout << TTY_DEFAULT << "\nSelected word is: ";
 
-	printText(text, corruptedText, workingText, wordStart, wordLength);
+	printText(game, game.wordStart, game.wordLength);
 
 	std::cout << "\n\nEnter the number of the character in this word you wish to inspect (0 to cancel): ";
-	std::cin >> *charIndex;
+	std::cin >> game.charIndex;
 
-	if (!(*charIndex))
+	if (!game.charIndex)
 		return ECANCELED;
 
-	return (*charIndex <= wordLength) ? 0 : EINVAL;
+	return (game.charIndex <= game.wordLength) ? 0 : EINVAL;
 }
 
-int charModificationState(const char *text, const char *corruptedText, char *workingText, int textLength, int wordStart, int wordLength, int charIndex, int *mistakes) 
+int charModificationState(game_t &game) 
 {
-	printText(text, corruptedText, workingText, 0, textLength);
+	printText(game, 0, game.textLength);
 
 	std::cout << TTY_DEFAULT << "\nSelected word is: ";
 
-	printText(text, corruptedText, workingText, wordStart, wordLength);
+	printText(game, game.wordStart, game.wordLength);
 
 	std::cout << TTY_DEFAULT << "\nSelected char is: ";
 
-	for (int i = 1; i < charIndex; i++)
+	for (int i = 1; i < game.charIndex; i++)
 		std::cout << ' ';
 
 	std::cout << '^';
 
 	std::cout << "\n\nChoose what to change the selected character to: \n0) Cancel\n";
 
-	char x = workingText[wordStart + charIndex - 1];
+	int textOffset = game.wordStart + game.charIndex - 1;
+
+	char x = game.workingText[textOffset];
 	for (int i = 0; i < 6; i++)
 		std::cout << (i + 1) << ") " << (char)(x ^ (1 << i)) << '\n';
 
@@ -243,12 +256,86 @@ int charModificationState(const char *text, const char *corruptedText, char *wor
 	if (!isAsciiPrintable(x) || x == ' ')
 		return EAGAIN;
 
-	workingText[wordStart + charIndex - 1] = x;
+	game.workingText[textOffset] = x;
 
-	if (text[wordStart + charIndex - 1] != x)
-		(*mistakes)++;
+	if (game.text[textOffset] != x)
+		game.mistakes++;
 
 	return 0;
+}
+
+void run(game_t &game) 
+{
+	std::cout << TTY_CLEAR;
+	srand(game.seed);
+
+	for (;;) 
+	{
+		bool winning = true;
+
+		for (int i = 0; i < game.textLength; i++) 
+		{
+			if (game.text[i] != game.workingText[i]) 
+			{
+				winning = false;
+				break;
+			}
+		}
+
+		if (winning) 
+		{
+			std::cout << TTY_CLEAR;
+			printText(game, 0, game.textLength);
+			std::cout << "\n\nCongratulations! You won! You made only " << game.mistakes << ((game.mistakes == 1) ? " mistake!\n" : " mistakes!\n");
+			break;
+		}
+
+		switch (game.state) 
+		{
+			case STATE_WORD_SELECTION:
+				switch (wordSelectionState(game)) 
+				{
+					case EINVAL:
+						std::cout << TTY_CLEAR;
+						std::cout << "invalid input, try again\n\n";
+						continue;
+				}
+				break;
+			case STATE_CHAR_SELECTION:
+				switch (charSelectionState(game)) 
+				{
+					case EINVAL:
+						std::cout << TTY_CLEAR;
+						std::cout << "invalid input, try again\n\n";
+						continue;
+					case ECANCELED:
+						std::cout << TTY_CLEAR;
+						game.state--;
+						continue;
+				}
+				break;
+			case STATE_CHAR_MODIFICATINO:
+				switch (charModificationState(game)) 
+				{
+					case EINVAL:
+						std::cout << TTY_CLEAR;
+						std::cout << "invalid input, try again\n\n";
+						continue;
+					case EAGAIN:
+						std::cout << TTY_CLEAR;
+						std::cout << "the selected character is non-printable or whitespace, try again\n\n";
+						continue;
+					case ECANCELED:
+						std::cout << TTY_CLEAR;
+						game.state--;
+						continue;
+				}
+				break;
+		}
+
+		game.state = (game.state + 1) % STATE_COUNT;
+		std::cout << TTY_CLEAR;
+	}
 }
 
 int main() 
@@ -287,81 +374,23 @@ int main()
 	char *workingText = new char[textLength + 1];
 	memcpy(workingText, corruptedText, textLength + 1);
 
-	srand(time(NULL) ^ (time_t)text);
-	std::cout << TTY_CLEAR;
 
-	int state = STATE_WORD_SELECTION;
-	int wordStart, wordLength, charIndex, mistakes = 0;
-	bool result;
-
-	for (;;) 
+	game_t game = 
 	{
-		bool winning = true;
+		.seed = (unsigned int)time(NULL),
+		.textLength = textLength,
+		.state = STATE_WORD_SELECTION,
+		.mistakes = 0,
+		.text = text,
+		.corruptedText = corruptedText,
+		.workingText = workingText
+	};
+	run(game);
 
-		for (int i = 0; i < textLength; i++) 
-		{
-			if (text[i] != workingText[i]) 
-			{
-				winning = false;
-				break;
-			}
-		}
 
-		if (winning) 
-		{
-			std::cout << TTY_CLEAR;
-			printText(text, corruptedText, workingText, 0, textLength);
-			std::cout << "\n\nCongratulations! You won! You made only " << mistakes << ((mistakes == 1) ? " mistake!\n" : " mistakes!\n");
-			break;
-		}
+	delete[] text;
+	delete[] corruptedText;
+	delete[] workingText;
 
-		switch (state) 
-		{
-			case STATE_WORD_SELECTION:
-				switch (wordSelectionState(text, corruptedText, workingText, textLength, &wordStart, &wordLength)) 
-				{
-					case EINVAL:
-						std::cout << TTY_CLEAR;
-						std::cout << "invalid input, try again\n\n";
-						continue;
-				}
-				break;
-			case STATE_CHAR_SELECTION:
-				switch (charSelectionState(text, corruptedText, workingText, textLength, wordStart, wordLength, &charIndex)) 
-				{
-					case EINVAL:
-						std::cout << TTY_CLEAR;
-						std::cout << "invalid input, try again\n\n";
-						continue;
-					case ECANCELED:
-						std::cout << TTY_CLEAR;
-						state--;
-						continue;
-				}
-				break;
-			case STATE_CHAR_MODIFICATINO:
-				switch (charModificationState(text, corruptedText, workingText, textLength, wordStart, wordLength, charIndex, &mistakes)) 
-				{
-					case EINVAL:
-						std::cout << TTY_CLEAR;
-						std::cout << "invalid input, try again\n\n";
-						continue;
-					case EAGAIN:
-						std::cout << TTY_CLEAR;
-						std::cout << "the selected character is non-printable or whitespace, try again\n\n";
-						continue;
-					case ECANCELED:
-						std::cout << TTY_CLEAR;
-						state--;
-						continue;
-				}
-				break;
-		}
-
-		state = (state + 1) % STATE_COUNT;
-		std::cout << TTY_CLEAR;
-	}
-
-	delete[] text, corruptedText, workingText;
 	return 0;
 }
