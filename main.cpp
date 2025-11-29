@@ -1,14 +1,6 @@
 #include <iostream>
 #include <fstream>
 
-#ifdef linux
-#include <unistd.h>
-void sleep(int time) { usleep(time * 1000); }
-#elifdef _WIN32
-#include <windows.h>
-void sleep(int time) { Sleep(time); }
-#endif
-
 const char 
 	*TTY_CLEAR = "\x1b[H\x1b[2J",
 	*TTY_RED = "\x1b[31;49m",
@@ -357,7 +349,6 @@ int main()
 				break;
 		}
 
-		sleep(200);
 		state = (state + 1) % STATE_COUNT;
 		std::cout << TTY_CLEAR;
 	}
