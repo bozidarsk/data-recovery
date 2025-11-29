@@ -57,12 +57,12 @@ void corrupt(char *text, int percentage)
 	}
 }
 
-int getstreamsize(std::ifstream &file, size_t offset = 50) 
+int getstreamsize(std::ifstream &file, long long offset = 50) 
 {
-	if (!file.good() || offset == 0)
+	if (!file.good())
 		return -1;
 
-	size_t oldOffset = file.tellg();
+	long long oldOffset = file.tellg();
 
 	file.seekg(offset);
 	int a = file.peek();
@@ -70,7 +70,7 @@ int getstreamsize(std::ifstream &file, size_t offset = 50)
 	int b = file.peek();
 
 	bool outside = a == EOF && b == EOF;
-	size_t step = offset;
+	long long step = offset;
 	int size;
 
 	while (true) 
@@ -111,6 +111,13 @@ int getstreamsize(std::ifstream &file, size_t offset = 50)
 		{
 			size = -1;
 			break;
+		}
+
+		if (offset < 0) 
+		{
+			outside = true;
+			offset = 0;
+			step = 1;
 		}
 	}
 
