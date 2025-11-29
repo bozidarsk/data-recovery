@@ -257,6 +257,12 @@ int main()
 	std::cout << "corruption rate (between 0 and 1): ";
 	std::cin >> corruptionRate;
 
+	if (corruptionRate < 0.0 || corruptionRate > 1.0) 
+	{
+		std::cout << "invalid input\n";
+		return 1;
+	}
+
 	corrupt(corruptedText, corruptionRate * 100.0);
 
 	char *workingText = new char[textLength + 1];
