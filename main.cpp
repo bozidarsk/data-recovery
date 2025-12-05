@@ -356,14 +356,21 @@ void run(game_t &game)
 	}
 }
 
-void unload(game_t &game) 
+int unload(game_t &game) 
 {
-	delete[] game.text;
-	delete[] game.corruptedText;
-	delete[] game.workingText;
+	if (game.text)
+		delete[] game.text;
+
+	if (game.corruptedText)
+		delete[] game.corruptedText;
+
+	if (game.workingText)
+		delete[] game.workingText;
+
+	return 0;
 }
 
-game_t load() 
+int load(game_t &game) 
 {
 	std::string path;
 	std::cout << "path: ";
@@ -373,7 +380,7 @@ game_t load()
 	if (!file.good()) 
 	{
 		std::cout << "failed to open file '" << path << "'\n";
-		return {0};
+		return EINVAL;
 	}
 
 	int textLength = getstreamsize(file);
@@ -391,7 +398,7 @@ game_t load()
 	if (corruptionRate < 0.0 || corruptionRate > 1.0) 
 	{
 		std::cout << "invalid input\n";
-		return {0};
+		return EINVAL;
 	}
 
 	corrupt(corruptedText, corruptionRate * 100.0);
@@ -399,24 +406,21 @@ game_t load()
 	char *workingText = new char[textLength + 1];
 	memcpy(workingText, corruptedText, textLength + 1);
 
-	game_t game = 
-	{
-		.seed = (unsigned int)time(NULL),
-		.textLength = textLength,
-		.state = STATE_WORD_SELECTION,
-		.mistakes = 0,
-		.wordStart = -1,
-		.wordLength = -1,
-		.charIndex = -1,
-		.text = text,
-		.corruptedText = corruptedText,
-		.workingText = workingText
-	};
+	*(unsigned int*)(&game.seed) = (unsigned int)time(NULL);
+	*(int*)(&game.textLength) = textLength;
+	*(int*)(&game.state) = STATE_WORD_SELECTION;
+	*(int*)(&game.mistakes) = 0;
+	*(int*)(&game.wordStart) = -1;
+	*(int*)(&game.wordLength) = -1;
+	*(int*)(&game.charIndex) = -1;
+	*(char**)(&game.text) = text;
+	*(char**)(&game.corruptedText) = corruptedText;
+	*(char**)(&game.workingText) = workingText;
 
-	return game;
+	return 0;
 }
 
-game_t loadfile() 
+int loadfile(game_t &game) 
 {
 	std::string path;
 	std::cout << "path: ";
@@ -426,7 +430,7 @@ game_t loadfile()
 	if (!file.good()) 
 	{
 		std::cout << "failed to open file '" << path << "'\n";
-		return {0};
+		return EINVAL;
 	}
 
 	char buf[sizeof(gameheader_t)];
@@ -434,28 +438,25 @@ game_t loadfile()
 
 	file.read(buf, sizeof(gameheader_t));
 
-	game_t game = 
-	{
-		.seed = header->seed,
-		.textLength = header->textLength,
-		.state = header->state,
-		.mistakes = header->mistakes,
-		.wordStart = header->wordStart,
-		.wordLength = header->wordLength,
-		.charIndex = header->charIndex,
-		.text = new char[header->textLength + 1],
-		.corruptedText = new char[header->textLength + 1],
-		.workingText = new char[header->textLength + 1]
-	};
+	*(unsigned int*)(&game.seed) = header->seed;
+	*(int*)(&game.textLength) = header->textLength;
+	*(int*)(&game.state) = header->state;
+	*(int*)(&game.mistakes) = header->mistakes;
+	*(int*)(&game.wordStart) = header->wordStart;
+	*(int*)(&game.wordLength) = header->wordLength;
+	*(int*)(&game.charIndex) = header->charIndex;
+	*(char**)(&game.text) = new char[header->textLength + 1];
+	*(char**)(&game.corruptedText) = new char[header->textLength + 1];
+	*(char**)(&game.workingText) = new char[header->textLength + 1];
 
 	file.read((char*)game.text, game.textLength + 1);
 	file.read((char*)game.corruptedText, game.textLength + 1);
 	file.read((char*)game.workingText, game.textLength + 1);
 
-	return game;
+	return 0;
 }
 
-void savefile(const game_t &game) 
+int savefile(const game_t &game) 
 {
 	std::string path;
 	std::cout << "path: ";
@@ -465,7 +466,7 @@ void savefile(const game_t &game)
 	if (!file.good()) 
 	{
 		std::cout << "failed to open file '" << path << "'\n";
-		return;
+		return EINVAL;
 	}
 
 	file.write((const char*)(&game.header), sizeof(gameheader_t));
@@ -473,11 +474,15 @@ void savefile(const game_t &game)
 	file.write(game.text, game.textLength + 1);
 	file.write(game.corruptedText, game.textLength + 1);
 	file.write(game.workingText, game.textLength + 1);
+
+	return 0;
 }
 
 int main() 
 {
-	game_t game = load();
+	game_t game = {0};
+
+	load(game);
 	run(game);
 	savefile(game);
 	unload(game);
