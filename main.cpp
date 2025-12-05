@@ -1,15 +1,33 @@
 #include <iostream>
 #include <fstream>
 
-typedef struct game_t 
+typedef struct gameheader_t 
 {
 	const unsigned int seed;
 	const int textLength;
 	int state, mistakes, wordStart, wordLength, charIndex;
+} gameheader_t;
 
-	const char *text;
-	const char *corruptedText;
-	char *workingText;
+typedef struct game_t 
+{
+	union 
+	{
+		struct 
+		{
+			const unsigned int seed;
+			const int textLength;
+			int state, mistakes, wordStart, wordLength, charIndex;
+		};
+
+		gameheader_t header;
+	};
+
+	struct 
+	{
+		const char *text;
+		const char *corruptedText;
+		char *workingText;
+	};
 } game_t;
 
 const char 
@@ -349,7 +367,7 @@ game_t load()
 {
 	std::string path;
 	std::cout << "path: ";
-	std::getline(std::cin, path);
+	std::getline(std::cin >> std::ws, path);
 
 	std::ifstream file(path);
 	if (!file.good()) 
@@ -387,6 +405,9 @@ game_t load()
 		.textLength = textLength,
 		.state = STATE_WORD_SELECTION,
 		.mistakes = 0,
+		.wordStart = -1,
+		.wordLength = -1,
+		.charIndex = -1,
 		.text = text,
 		.corruptedText = corruptedText,
 		.workingText = workingText
@@ -395,21 +416,70 @@ game_t load()
 	return game;
 }
 
-game_t load(std::string &path) 
+game_t loadfile() 
 {
-	// TODO
-	return {0};
+	std::string path;
+	std::cout << "path: ";
+	std::getline(std::cin >> std::ws, path);
+
+	std::ifstream file(path);
+	if (!file.good()) 
+	{
+		std::cout << "failed to open file '" << path << "'\n";
+		return {0};
+	}
+
+	char buf[sizeof(gameheader_t)];
+	gameheader_t *header = (gameheader_t*)buf;
+
+	file.read(buf, sizeof(gameheader_t));
+
+	game_t game = 
+	{
+		.seed = header->seed,
+		.textLength = header->textLength,
+		.state = header->state,
+		.mistakes = header->mistakes,
+		.wordStart = header->wordStart,
+		.wordLength = header->wordLength,
+		.charIndex = header->charIndex,
+		.text = new char[header->textLength + 1],
+		.corruptedText = new char[header->textLength + 1],
+		.workingText = new char[header->textLength + 1]
+	};
+
+	file.read((char*)game.text, game.textLength + 1);
+	file.read((char*)game.corruptedText, game.textLength + 1);
+	file.read((char*)game.workingText, game.textLength + 1);
+
+	return game;
 }
 
-void save(std::string &path, game_t &game) 
+void savefile(const game_t &game) 
 {
-	// TODO
+	std::string path;
+	std::cout << "path: ";
+	std::getline(std::cin >> std::ws, path);
+
+	std::ofstream file(path);
+	if (!file.good()) 
+	{
+		std::cout << "failed to open file '" << path << "'\n";
+		return;
+	}
+
+	file.write((const char*)(&game.header), sizeof(gameheader_t));
+
+	file.write(game.text, game.textLength + 1);
+	file.write(game.corruptedText, game.textLength + 1);
+	file.write(game.workingText, game.textLength + 1);
 }
 
 int main() 
 {
 	game_t game = load();
 	run(game);
+	savefile(game);
 	unload(game);
 
 	return 0;
