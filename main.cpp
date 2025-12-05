@@ -5,6 +5,7 @@ typedef struct gameheader_t
 {
 	const unsigned int seed;
 	const int textLength;
+	bool isLoaded;
 	int state, mistakes, wordStart, wordLength, charIndex;
 } gameheader_t;
 
@@ -16,6 +17,7 @@ typedef struct game_t
 		{
 			const unsigned int seed;
 			const int textLength;
+			bool isLoaded;
 			int state, mistakes, wordStart, wordLength, charIndex;
 		};
 
@@ -24,9 +26,9 @@ typedef struct game_t
 
 	struct 
 	{
-		const char *text;
-		const char *corruptedText;
-		char *workingText;
+		const char *const text;
+		const char *const corruptedText;
+		char *const workingText;
 	};
 } game_t;
 
@@ -38,9 +40,13 @@ const char
 ;
 
 const int 
+	STATE_MENU = -1,
 	STATE_WORD_SELECTION = 0,
 	STATE_CHAR_SELECTION = 1,
 	STATE_CHAR_MODIFICATINO = 2,
+	STATE_LOAD_FILE = 3,
+	STATE_SAVE_FILE = 4,
+	STATE_LOAD = 5,
 	STATE_COUNT = 3
 ;
 
@@ -195,15 +201,178 @@ void printText(game_t &game, int index, int length)
 	std::cout << TTY_DEFAULT;
 }
 
+int unload(game_t &game) 
+{
+	if (!game.isLoaded)
+		return ENODATA;
+
+	if (game.text)
+		delete[] game.text;
+
+	if (game.corruptedText)
+		delete[] game.corruptedText;
+
+	if (game.workingText)
+		delete[] game.workingText;
+
+	game.isLoaded = false;
+
+	return 0;
+}
+
+int load(game_t &game) 
+{
+	if (game.isLoaded)
+		unload(game);
+
+	std::string path;
+	std::cout << "path: ";
+	std::getline(std::cin >> std::ws, path);
+
+	std::ifstream file(path);
+
+	if (!file.good())
+		return ENOENT;
+
+	double corruptionRate;
+	std::cout << "corruption rate (between 0 and 1): ";
+	std::cin >> corruptionRate;
+
+	if (corruptionRate < 0.0 || corruptionRate > 1.0)
+		return EINVAL;
+
+	int textLength = getstreamsize(file);
+	char *text = new char[textLength + 1];
+	file.read(text, textLength);
+	text[textLength] = 0;
+
+	char *corruptedText = new char[textLength + 1];
+	memcpy(corruptedText, text, textLength + 1);
+
+	corrupt(corruptedText, corruptionRate * 100.0);
+
+	char *workingText = new char[textLength + 1];
+	memcpy(workingText, corruptedText, textLength + 1);
+
+	gameheader_t header = 
+	{
+		.seed = (unsigned int)time(NULL),
+		.textLength = textLength,
+		.state = STATE_WORD_SELECTION,
+		.mistakes = 0,
+		.wordStart = -1,
+		.wordLength = -1,
+		.charIndex = -1
+	};
+
+	memcpy(&game.header, &header, sizeof(header));
+
+	*(char**)(&game.text) = text;
+	*(char**)(&game.corruptedText) = corruptedText;
+	*(char**)(&game.workingText) = workingText;
+
+	game.isLoaded = true;
+
+	return 0;
+}
+
+int loadfile(game_t &game) 
+{
+	if (game.isLoaded)
+		unload(game);
+
+	std::string path;
+	std::cout << "path: ";
+	std::getline(std::cin >> std::ws, path);
+
+	std::ifstream file(path);
+
+	if (!file.good())
+		return ENOENT;
+
+	file.read((char*)(&game.header), sizeof(gameheader_t));
+
+	*(char**)(&game.text) = new char[game.textLength + 1];
+	*(char**)(&game.corruptedText) = new char[game.textLength + 1];
+	*(char**)(&game.workingText) = new char[game.textLength + 1];
+
+	file.read((char*)game.text, game.textLength + 1);
+	file.read((char*)game.corruptedText, game.textLength + 1);
+	file.read((char*)game.workingText, game.textLength + 1);
+
+	game.isLoaded = true;
+
+	return 0;
+}
+
+int savefile(const game_t &game) 
+{
+	if (!game.isLoaded)
+		return ENODATA;
+
+	std::string path;
+	std::cout << "path: ";
+	std::getline(std::cin >> std::ws, path);
+
+	std::ofstream file(path);
+
+	if (!file.good())
+		return ENOENT;
+
+	file.write((const char*)(&game.header), sizeof(gameheader_t));
+
+	file.write(game.text, game.textLength + 1);
+	file.write(game.corruptedText, game.textLength + 1);
+	file.write(game.workingText, game.textLength + 1);
+
+	return 0;
+}
+
+int menuState(game_t &game) 
+{
+	std::cout << "what do you want to do?\n";
+	std::cout << "1) load game from stdin (create a new game)\n";
+	std::cout << "2) load game save file\n";
+	std::cout << "3) save current game\n";
+	std::cout << "4) exit game\n";
+	std::cout << "choice: ";
+
+	int x;
+	std::cin >> x;
+	std::cout << '\n';
+
+	switch (x) 
+	{
+		case 1:
+			game.state = STATE_LOAD;
+			break;
+		case 2:
+			game.state = STATE_LOAD_FILE;
+			break;
+		case 3:
+			game.state = STATE_SAVE_FILE;
+			break;
+		case 4:
+			return ECANCELED;
+		default:
+			return EINVAL;
+	}
+
+	return 0;
+}
+
 int wordSelectionState(game_t &game) 
 {
 	printText(game, 0, game.textLength);
 
 	int word;
-	std::cout << "\n\nEnter the number of the word you wish to inspect: ";
+	std::cout << "\n\nEnter the number of the word you wish to inspect (0 to cancel): ";
 	std::cin >> word;
 
 	word--;
+
+	if (word == -1)
+		return ECANCELED;
 
 	if (word < 0)
 		return EINVAL;
@@ -282,23 +451,19 @@ int charModificationState(game_t &game)
 	return 0;
 }
 
-void run(game_t &game) 
+int run(game_t &game) 
 {
 	std::cout << TTY_CLEAR;
+
 	srand(game.seed);
 
 	for (;;) 
 	{
-		bool winning = true;
+		bool winning = game.isLoaded;
 
-		for (int i = 0; i < game.textLength; i++) 
-		{
-			if (game.text[i] != game.workingText[i]) 
-			{
+		for (int i = 0; winning && i < game.textLength; i++)
+			if (game.text[i] != game.workingText[i])
 				winning = false;
-				break;
-			}
-		}
 
 		if (winning) 
 		{
@@ -310,12 +475,70 @@ void run(game_t &game)
 
 		switch (game.state) 
 		{
+			case STATE_MENU:
+				switch (menuState(game)) 
+				{
+					case EINVAL:
+						std::cout << TTY_CLEAR;
+						std::cout << "invalid input, try again\n\n";
+						break;
+					case ECANCELED:
+						return 0;
+				}
+				continue;
+			case STATE_LOAD:
+				switch (load(game)) 
+				{
+					case ENOENT:
+						std::cout << TTY_CLEAR;
+						std::cout << "failed to open file, try again\n\n";
+						unload(game);
+						continue;
+					case EINVAL:
+						std::cout << TTY_CLEAR;
+						std::cout << "invalid input, try again\n\n";
+						unload(game);
+						continue;
+				}
+				game.state = STATE_WORD_SELECTION;
+				return run(game);
+			case STATE_LOAD_FILE:
+				switch (loadfile(game)) 
+				{
+					case ENOENT:
+						std::cout << TTY_CLEAR;
+						std::cout << "failed to open file, try again\n\n";
+						unload(game);
+						continue;
+				}
+				game.state = STATE_WORD_SELECTION;
+				return run(game);
+			case STATE_SAVE_FILE:
+				switch (savefile(game)) 
+				{
+					case ENOENT:
+						std::cout << TTY_CLEAR;
+						std::cout << "failed to open file, try again\n";
+						unload(game);
+						continue;
+					case ENODATA:
+						std::cout << TTY_CLEAR;
+						std::cout << "cannot save uninitialized game\n"; // fatal
+						return 1;
+				}
+				std::cout << TTY_CLEAR;
+				game.state = STATE_MENU;
+				continue;
 			case STATE_WORD_SELECTION:
 				switch (wordSelectionState(game)) 
 				{
 					case EINVAL:
 						std::cout << TTY_CLEAR;
 						std::cout << "invalid input, try again\n\n";
+						continue;
+					case ECANCELED:
+						std::cout << TTY_CLEAR;
+						game.state--;
 						continue;
 				}
 				break;
@@ -354,126 +577,6 @@ void run(game_t &game)
 		game.state = (game.state + 1) % STATE_COUNT;
 		std::cout << TTY_CLEAR;
 	}
-}
-
-int unload(game_t &game) 
-{
-	if (game.text)
-		delete[] game.text;
-
-	if (game.corruptedText)
-		delete[] game.corruptedText;
-
-	if (game.workingText)
-		delete[] game.workingText;
-
-	return 0;
-}
-
-int load(game_t &game) 
-{
-	std::string path;
-	std::cout << "path: ";
-	std::getline(std::cin >> std::ws, path);
-
-	std::ifstream file(path);
-	if (!file.good()) 
-	{
-		std::cout << "failed to open file '" << path << "'\n";
-		return EINVAL;
-	}
-
-	int textLength = getstreamsize(file);
-	char *text = new char[textLength + 1];
-	file.read(text, textLength);
-	text[textLength] = 0;
-
-	char *corruptedText = new char[textLength + 1];
-	memcpy(corruptedText, text, textLength + 1);
-
-	double corruptionRate;
-	std::cout << "corruption rate (between 0 and 1): ";
-	std::cin >> corruptionRate;
-
-	if (corruptionRate < 0.0 || corruptionRate > 1.0) 
-	{
-		std::cout << "invalid input\n";
-		return EINVAL;
-	}
-
-	corrupt(corruptedText, corruptionRate * 100.0);
-
-	char *workingText = new char[textLength + 1];
-	memcpy(workingText, corruptedText, textLength + 1);
-
-	*(unsigned int*)(&game.seed) = (unsigned int)time(NULL);
-	*(int*)(&game.textLength) = textLength;
-	*(int*)(&game.state) = STATE_WORD_SELECTION;
-	*(int*)(&game.mistakes) = 0;
-	*(int*)(&game.wordStart) = -1;
-	*(int*)(&game.wordLength) = -1;
-	*(int*)(&game.charIndex) = -1;
-	*(char**)(&game.text) = text;
-	*(char**)(&game.corruptedText) = corruptedText;
-	*(char**)(&game.workingText) = workingText;
-
-	return 0;
-}
-
-int loadfile(game_t &game) 
-{
-	std::string path;
-	std::cout << "path: ";
-	std::getline(std::cin >> std::ws, path);
-
-	std::ifstream file(path);
-	if (!file.good()) 
-	{
-		std::cout << "failed to open file '" << path << "'\n";
-		return EINVAL;
-	}
-
-	char buf[sizeof(gameheader_t)];
-	gameheader_t *header = (gameheader_t*)buf;
-
-	file.read(buf, sizeof(gameheader_t));
-
-	*(unsigned int*)(&game.seed) = header->seed;
-	*(int*)(&game.textLength) = header->textLength;
-	*(int*)(&game.state) = header->state;
-	*(int*)(&game.mistakes) = header->mistakes;
-	*(int*)(&game.wordStart) = header->wordStart;
-	*(int*)(&game.wordLength) = header->wordLength;
-	*(int*)(&game.charIndex) = header->charIndex;
-	*(char**)(&game.text) = new char[header->textLength + 1];
-	*(char**)(&game.corruptedText) = new char[header->textLength + 1];
-	*(char**)(&game.workingText) = new char[header->textLength + 1];
-
-	file.read((char*)game.text, game.textLength + 1);
-	file.read((char*)game.corruptedText, game.textLength + 1);
-	file.read((char*)game.workingText, game.textLength + 1);
-
-	return 0;
-}
-
-int savefile(const game_t &game) 
-{
-	std::string path;
-	std::cout << "path: ";
-	std::getline(std::cin >> std::ws, path);
-
-	std::ofstream file(path);
-	if (!file.good()) 
-	{
-		std::cout << "failed to open file '" << path << "'\n";
-		return EINVAL;
-	}
-
-	file.write((const char*)(&game.header), sizeof(gameheader_t));
-
-	file.write(game.text, game.textLength + 1);
-	file.write(game.corruptedText, game.textLength + 1);
-	file.write(game.workingText, game.textLength + 1);
 
 	return 0;
 }
@@ -481,11 +584,7 @@ int savefile(const game_t &game)
 int main() 
 {
 	game_t game = {0};
+	game.state = STATE_MENU;
 
-	load(game);
-	run(game);
-	savefile(game);
-	unload(game);
-
-	return 0;
+	return run(game);
 }
