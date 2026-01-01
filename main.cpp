@@ -68,7 +68,7 @@ char *readline()
 {
 	std::cin >> std::ws; // switch from formatted to unformatted input (clear stdin from whitespaces)
 
-	int capacity = 10;
+	int capacity = 100;
 	int index = 0;
 
 	char *buffer = new char[capacity];
