@@ -32,7 +32,7 @@ typedef struct
 } game_t;
 
 const char 
-	*TTY_CLEAR = "\x1b[H\x1b[2J",
+	*TTY_CLEAR = "\x1b[H\x1b[2J\x1b[3J",
 	*TTY_RED = "\x1b[31;49m",
 	*TTY_GREEN = "\x1b[32;49m",
 	*TTY_DEFAULT = "\x1b[39;49m"
