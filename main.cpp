@@ -247,15 +247,21 @@ int load(game_t &game)
 
 	std::ifstream file(path);
 
-	if (!file.good())
+	if (!file.good()) 
+	{
+		file.close();
 		return ENOENT;
+	}
 
 	double corruptionRate;
 	std::cout << "corruption rate (between 0 and 1): ";
 	std::cin >> corruptionRate;
 
-	if (corruptionRate < 0.0 || corruptionRate > 1.0)
+	if (corruptionRate < 0.0 || corruptionRate > 1.0) 
+	{
+		file.close();
 		return EINVAL;
+	}
 
 	int textLength = getstreamsize(file);
 	char *text = new char[textLength + 1];
@@ -289,6 +295,7 @@ int load(game_t &game)
 
 	game.isLoaded = true;
 
+	file.close();
 	return 0;
 }
 
@@ -303,8 +310,11 @@ int loadfile(game_t &game)
 
 	std::ifstream file(path);
 
-	if (!file.good())
+	if (!file.good()) 
+	{
+		file.close();
 		return ENOENT;
+	}
 
 	file.read((char*)(&game.header), sizeof(gameheader_t));
 
@@ -318,6 +328,7 @@ int loadfile(game_t &game)
 
 	game.isLoaded = true;
 
+	file.close();
 	return 0;
 }
 
@@ -332,8 +343,11 @@ int savefile(const game_t &game)
 
 	std::ofstream file(path);
 
-	if (!file.good())
+	if (!file.good()) 
+	{
+		file.close();
 		return ENOENT;
+	}
 
 	file.write((const char*)(&game.header), sizeof(gameheader_t));
 
@@ -341,6 +355,7 @@ int savefile(const game_t &game)
 	file.write(game.corruptedText, game.textLength + 1);
 	file.write(game.workingText, game.textLength + 1);
 
+	file.close();
 	return 0;
 }
 
