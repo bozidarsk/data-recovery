@@ -449,14 +449,21 @@ int wordSelectionState(game_t &game)
 	if (word < 0)
 		return EINVAL;
 
-	int indices[game.textLength], lengths[game.textLength];
+	int *indices = new int[game.textLength];
+	int *lengths = new int[game.textLength];
 
-	if (word >= splitWords(game.workingText, indices, lengths))
+	if (word >= splitWords(game.workingText, indices, lengths)) 
+	{
+		delete[] indices;
+		delete[] lengths;
 		return EINVAL;
+	}
 
 	game.wordStart = indices[word];
 	game.wordLength = lengths[word];
 
+	delete[] indices;
+	delete[] lengths;
 	return 0;
 }
 
