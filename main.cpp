@@ -53,7 +53,7 @@ bool isAsciiLetter(char x) { return (x >= 'a' && x <= 'z') || (x >= 'A' && x <= 
 bool isAsciiPrintable(char x) { return x > 0x1f && x < 0x7f; }
 bool isAsciiWhiteSpace(char x) { return x == ' ' || x == '\n' || x == '\r' || x == '\t' || x == '\0'; }
 
-void *memcpy(void *dest, const void *src, size_t size) 
+void *memcopy(void *dest, const void *src, size_t size) 
 {
 	if (!dest || !src)
 		return dest;
@@ -82,7 +82,7 @@ char *readline()
 		if (index == capacity) 
 		{
 			int newCapacity = capacity * 2;
-			char *newBuffer = (char*)memcpy(new char[newCapacity], buffer, capacity);
+			char *newBuffer = (char*)memcopy(new char[newCapacity], buffer, capacity);
 
 			delete[] buffer;
 
@@ -93,7 +93,7 @@ char *readline()
 
 	index--; // remove delim char
 
-	char *line = (char*)memcpy(new char[index + 1], buffer, index);
+	char *line = (char*)memcopy(new char[index + 1], buffer, index);
 	line[index + 1] = 0;
 
 	return line;
@@ -290,12 +290,12 @@ int load(game_t &game)
 	text[textLength] = 0;
 
 	char *corruptedText = new char[textLength + 1];
-	memcpy(corruptedText, text, textLength + 1);
+	memcopy(corruptedText, text, textLength + 1);
 
 	corrupt(corruptedText, corruptionRate * 100.0);
 
 	char *workingText = new char[textLength + 1];
-	memcpy(workingText, corruptedText, textLength + 1);
+	memcopy(workingText, corruptedText, textLength + 1);
 
 	game_t header = 
 	{
@@ -308,7 +308,7 @@ int load(game_t &game)
 		.charIndex = -1
 	};
 
-	memcpy(&game, &header, (char*)&game.headerEnd - (char*)&game);
+	memcopy(&game, &header, (char*)&game.headerEnd - (char*)&game);
 
 	*(char**)(&game.text) = text;
 	*(char**)(&game.corruptedText) = corruptedText;
