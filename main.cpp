@@ -70,13 +70,50 @@ bool isAsciiLetter(char x) { return (x >= 'a' && x <= 'z') || (x >= 'A' && x <= 
 bool isAsciiPrintable(char x) { return x > 0x1f && x < 0x7f; }
 bool isAsciiWhiteSpace(char x) { return x == ' ' || x == '\n' || x == '\r' || x == '\t' || x == '\0'; }
 
-void memcpy(void *dest, const void *src, size_t size) 
+void *memcpy(void *dest, const void *src, size_t size) 
 {
 	if (!dest || !src)
-		return;
+		return dest;
 
 	for (size_t i = 0; i < size; i++)
 		((char*)dest)[i] = ((char*)src)[i];
+
+	return dest;
+}
+
+char *readline() 
+{
+	std::cin >> std::ws; // switch from formatted to unformatted input (clear stdin from whitespaces)
+
+	int capacity = 10;
+	int index = 0;
+
+	char *buffer = new char[capacity];
+	char x;
+
+	do 
+	{
+		x = getchar();
+		buffer[index++] = x;
+
+		if (index == capacity) 
+		{
+			int newCapacity = capacity * 2;
+			char *newBuffer = (char*)memcpy(new char[newCapacity], buffer, capacity);
+
+			delete[] buffer;
+
+			capacity = newCapacity;
+			buffer = newBuffer;
+		}
+	} while (x != '\r' && x != '\n' && x != EOF);
+
+	index--; // remove delim char
+
+	char *line = (char*)memcpy(new char[index + 1], buffer, index);
+	line[index + 1] = 0;
+
+	return line;
 }
 
 int getstreamsize(std::ifstream &file, long long offset = 50) 
@@ -241,15 +278,15 @@ int load(game_t &game)
 	if (game.isLoaded)
 		unload(game);
 
-	std::string path;
 	std::cout << "path: ";
-	std::getline(std::cin >> std::ws, path);
+	char *path = readline();
 
 	std::ifstream file(path);
 
 	if (!file.good()) 
 	{
 		file.close();
+		delete[] path;
 		return ENOENT;
 	}
 
@@ -260,6 +297,7 @@ int load(game_t &game)
 	if (corruptionRate < 0.0 || corruptionRate > 1.0) 
 	{
 		file.close();
+		delete[] path;
 		return EINVAL;
 	}
 
@@ -296,6 +334,7 @@ int load(game_t &game)
 	game.isLoaded = true;
 
 	file.close();
+	delete[] path;
 	return 0;
 }
 
@@ -304,15 +343,15 @@ int loadfile(game_t &game)
 	if (game.isLoaded)
 		unload(game);
 
-	std::string path;
 	std::cout << "path: ";
-	std::getline(std::cin >> std::ws, path);
+	char *path = readline();
 
 	std::ifstream file(path);
 
 	if (!file.good()) 
 	{
 		file.close();
+		delete[] path;
 		return ENOENT;
 	}
 
@@ -329,6 +368,7 @@ int loadfile(game_t &game)
 	game.isLoaded = true;
 
 	file.close();
+	delete[] path;
 	return 0;
 }
 
@@ -337,15 +377,15 @@ int savefile(const game_t &game)
 	if (!game.isLoaded)
 		return ENODATA;
 
-	std::string path;
 	std::cout << "path: ";
-	std::getline(std::cin >> std::ws, path);
+	char *path = readline();
 
 	std::ofstream file(path);
 
 	if (!file.good()) 
 	{
 		file.close();
+		delete[] path;
 		return ENOENT;
 	}
 
@@ -356,6 +396,7 @@ int savefile(const game_t &game)
 	file.write(game.workingText, game.textLength + 1);
 
 	file.close();
+	delete[] path;
 	return 0;
 }
 
