@@ -17,35 +17,18 @@
 #include <iostream>
 #include <fstream>
 
-typedef struct gameheader_t 
+typedef struct 
 {
 	const unsigned int seed;
 	const int textLength;
 	bool isLoaded;
 	int state, mistakes, wordStart, wordLength, charIndex;
-} gameheader_t;
 
-typedef struct game_t 
-{
-	union 
-	{
-		struct 
-		{
-			const unsigned int seed;
-			const int textLength;
-			bool isLoaded;
-			int state, mistakes, wordStart, wordLength, charIndex;
-		};
+	char headerEnd;
 
-		gameheader_t header;
-	};
-
-	struct 
-	{
-		const char *const text;
-		const char *const corruptedText;
-		char *const workingText;
-	};
+	const char *const text;
+	const char *const corruptedText;
+	char *const workingText;
 } game_t;
 
 const char 
@@ -314,7 +297,7 @@ int load(game_t &game)
 	char *workingText = new char[textLength + 1];
 	memcpy(workingText, corruptedText, textLength + 1);
 
-	gameheader_t header = 
+	game_t header = 
 	{
 		.seed = (unsigned int)time(NULL),
 		.textLength = textLength,
@@ -325,7 +308,7 @@ int load(game_t &game)
 		.charIndex = -1
 	};
 
-	memcpy(&game.header, &header, sizeof(header));
+	memcpy(&game, &header, (char*)&game.headerEnd - (char*)&game);
 
 	*(char**)(&game.text) = text;
 	*(char**)(&game.corruptedText) = corruptedText;
@@ -355,7 +338,7 @@ int loadfile(game_t &game)
 		return ENOENT;
 	}
 
-	file.read((char*)(&game.header), sizeof(gameheader_t));
+	file.read((char*)&game, (char*)&game.headerEnd - (char*)&game);
 
 	*(char**)(&game.text) = new char[game.textLength + 1];
 	*(char**)(&game.corruptedText) = new char[game.textLength + 1];
@@ -389,7 +372,7 @@ int savefile(const game_t &game)
 		return ENOENT;
 	}
 
-	file.write((const char*)(&game.header), sizeof(gameheader_t));
+	file.write((const char*)&game, (char*)&game.headerEnd - (char*)&game);
 
 	file.write(game.text, game.textLength + 1);
 	file.write(game.corruptedText, game.textLength + 1);
