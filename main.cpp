@@ -127,10 +127,10 @@ int splitWords(const char *str, int *indices, int *lengths)
 
 	while (str[index] != 0) 
 	{
-		while (isAsciiWhiteSpace(str[index]) && str[index]) index++;
+		while (isAsciiWhiteSpace(str[index]) && str[index] != '\0') index++;
 		indices[word] = index;
 
-		while (!isAsciiWhiteSpace(str[index]) && str[index]) index++;
+		while (!isAsciiWhiteSpace(str[index]) && str[index] != '\0') index++;
 		lengths[word] = index - indices[word];
 
 		if (lengths[word] == 0)
@@ -416,7 +416,7 @@ int charSelectionState(game_t &game)
 	std::cout << "\n\nEnter the number of the character in this word you wish to inspect (0 to cancel): ";
 	std::cin >> game.charIndex;
 
-	if (!game.charIndex)
+	if (game.charIndex == 0)
 		return ECANCELED;
 
 	return (game.charIndex >= 1 && game.charIndex <= game.wordLength) ? 0 : EINVAL;
@@ -449,7 +449,7 @@ int charModificationState(game_t &game)
 	std::cout << "Your choice: ";
 	std::cin >> newCharIndex;
 
-	if (!newCharIndex)
+	if (newCharIndex == 0)
 		return ECANCELED;
 
 	if (newCharIndex < 1 || newCharIndex > 6)
