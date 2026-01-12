@@ -103,71 +103,17 @@ char *readline()
 	return line;
 }
 
-int getstreamsize(std::ifstream &file, long long offset = 50) 
+std::streampos getstreamsize(std::ifstream &file) 
 {
 	if (!file.good())
-		return -1;
+		return 0;
 
-	long long oldOffset = file.tellg();
+	std::streampos offset = file.tellg();
+	file.seekg(0, file.end);
 
+	std::streampos size = file.tellg();
 	file.seekg(offset);
-	int a = file.peek();
-	file.seekg(offset + 1);
-	int b = file.peek();
 
-	bool outside = a == EOF && b == EOF;
-	long long step = offset;
-	int size;
-
-	while (true) 
-	{
-		file.seekg(offset);
-		a = file.peek();
-		file.seekg(offset + 1);
-		b = file.peek();
-
-		if (a != EOF && b == EOF) 
-		{
-			size = offset + 1;
-			break;
-		}
-		else if (a == EOF && b == EOF) 
-		{
-			offset -= step;
-
-			if (outside) step <<= 1;
-			else step >>= 1;
-
-			if (!step) step = 1;
-
-			outside = true;
-		}
-		else if (a != EOF && b != EOF) 
-		{
-			offset += step;
-
-			if (outside) step >>= 1;
-			else step <<= 1;
-
-			if (!step) step = 1;
-
-			outside = false;
-		}
-		else 
-		{
-			size = -1;
-			break;
-		}
-
-		if (offset < 0) 
-		{
-			outside = true;
-			offset = 0;
-			step = 1;
-		}
-	}
-
-	file.seekg(oldOffset);
 	return size;
 }
 
