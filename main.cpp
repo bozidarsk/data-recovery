@@ -242,14 +242,6 @@ int load(game_t &game)
 	file.read(text, textLength);
 	text[textLength] = 0;
 
-	char *corruptedText = new char[textLength + 1];
-	memcopy(corruptedText, text, textLength + 1);
-
-	corrupt(corruptedText, corruptionRate * 100.0);
-
-	char *workingText = new char[textLength + 1];
-	memcopy(workingText, corruptedText, textLength + 1);
-
 	game_t header = 
 	{
 		.seed = (unsigned int)time(NULL),
@@ -260,6 +252,15 @@ int load(game_t &game)
 		.wordLength = -1,
 		.charIndex = -1
 	};
+
+	char *corruptedText = new char[textLength + 1];
+	memcopy(corruptedText, text, textLength + 1);
+
+	srand(header.seed);
+	corrupt(corruptedText, corruptionRate * 100.0);
+
+	char *workingText = new char[textLength + 1];
+	memcopy(workingText, corruptedText, textLength + 1);
 
 	memcopy(&game, &header, (char*)&game.headerEnd - (char*)&game);
 
