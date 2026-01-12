@@ -68,8 +68,8 @@ char *readline()
 {
 	std::cin >> std::ws; // switch from formatted to unformatted input (clear stdin from whitespaces)
 
-	int len = 0;
-	int cap = 100;
+	size_t len = 0;
+	size_t cap = 100;
 	char *buffer = new char[cap];
 	char x;
 
@@ -77,7 +77,7 @@ char *readline()
 	{
 		if (len >= cap) 
 		{
-			int cap2 = cap * 2;
+			size_t cap2 = cap * 2;
 			char *buffer2 = (char*)memcopy(new char[cap2], buffer, cap);
 
 			delete[] buffer;
@@ -92,7 +92,8 @@ char *readline()
 		buffer[len++] = x;
 	} while (x != '\r' && x != '\n' && x != EOF);
 
-	len--;
+	if (len != 0)
+		len--;
 
 	char *line = new char[len + 1];
 	line[len] = 0;
