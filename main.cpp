@@ -340,16 +340,16 @@ int savefile(const game_t &game)
 
 int menuState(game_t &game) 
 {
-	std::cout << "what do you want to do?\n";
-	std::cout << "1) load game from stdin (create a new game)\n";
-	std::cout << "2) load game save file\n";
-	std::cout << "3) save current game\n";
-	std::cout << "4) exit game\n";
+	std::cout << "what do you want to do?" << std::endl;
+	std::cout << "1) load game from stdin (create a new game)" << std::endl;
+	std::cout << "2) load game save file" << std::endl;
+	std::cout << "3) save current game" << std::endl;
+	std::cout << "4) exit game" << std::endl;
 	std::cout << "choice: ";
 
 	int x;
 	std::cin >> x;
-	std::cout << '\n';
+	std::cout << std::endl;
 
 	switch (x) 
 	{
@@ -376,7 +376,7 @@ int wordSelectionState(game_t &game)
 	printText(game, 0, game.textLength);
 
 	int word;
-	std::cout << "\n\nEnter the number of the word you wish to inspect (0 to cancel): ";
+	std::cout << std::endl << std::endl << "Enter the number of the word you wish to inspect (0 to cancel): ";
 	std::cin >> word;
 
 	word--;
@@ -409,11 +409,11 @@ int charSelectionState(game_t &game)
 {
 	printText(game, 0, game.textLength);
 
-	std::cout << TTY_DEFAULT << "\nSelected word is: ";
+	std::cout << TTY_DEFAULT << std::endl << "Selected word is: ";
 
 	printText(game, game.wordStart, game.wordLength);
 
-	std::cout << "\n\nEnter the number of the character in this word you wish to inspect (0 to cancel): ";
+	std::cout << std::endl << std::endl << "Enter the number of the character in this word you wish to inspect (0 to cancel): ";
 	std::cin >> game.charIndex;
 
 	if (game.charIndex == 0)
@@ -426,24 +426,24 @@ int charModificationState(game_t &game)
 {
 	printText(game, 0, game.textLength);
 
-	std::cout << TTY_DEFAULT << "\nSelected word is: ";
+	std::cout << TTY_DEFAULT << std::endl << "Selected word is: ";
 
 	printText(game, game.wordStart, game.wordLength);
 
-	std::cout << TTY_DEFAULT << "\nSelected char is: ";
+	std::cout << TTY_DEFAULT << std::endl << "Selected char is: ";
 
 	for (int i = 1; i < game.charIndex; i++)
 		std::cout << ' ';
 
 	std::cout << '^';
 
-	std::cout << "\n\nChoose what to change the selected character to: \n0) Cancel\n";
+	std::cout << std::endl << std::endl << "Choose what to change the selected character to: " << std::endl << "0) Cancel" << std::endl;
 
 	int textOffset = game.wordStart + game.charIndex - 1;
 
 	char x = game.workingText[textOffset];
 	for (int i = 0; i < 6; i++)
-		std::cout << (i + 1) << ") " << (char)(x ^ (1 << i)) << '\n';
+		std::cout << (i + 1) << ") " << (char)(x ^ (1 << i)) << std::endl;
 
 	int newCharIndex;
 	std::cout << "Your choice: ";
@@ -486,7 +486,7 @@ int run(game_t &game)
 		{
 			std::cout << TTY_CLEAR;
 			printText(game, 0, game.textLength);
-			std::cout << "\n\nCongratulations! You won! You made only " << game.mistakes << ((game.mistakes == 1) ? " mistake!\n" : " mistakes!\n");
+			std::cout << std::endl << std::endl << "Congratulations! You won! You made only " << game.mistakes << ((game.mistakes == 1) ? " mistake!" : " mistakes!") << std::endl;
 			break;
 		}
 
@@ -497,7 +497,7 @@ int run(game_t &game)
 				{
 					case EINVAL:
 						std::cout << TTY_CLEAR;
-						std::cout << "invalid input, try again\n\n";
+						std::cout << "invalid input, try again" << std::endl << std::endl;
 						break;
 					case ECANCELED:
 						return 0;
@@ -508,12 +508,12 @@ int run(game_t &game)
 				{
 					case ENOENT:
 						std::cout << TTY_CLEAR;
-						std::cout << "failed to open file, try again\n\n";
+						std::cout << "failed to open file, try again" << std::endl << std::endl;
 						unload(game);
 						continue;
 					case EINVAL:
 						std::cout << TTY_CLEAR;
-						std::cout << "invalid input, try again\n\n";
+						std::cout << "invalid input, try again" << std::endl << std::endl;
 						unload(game);
 						continue;
 				}
@@ -524,7 +524,7 @@ int run(game_t &game)
 				{
 					case ENOENT:
 						std::cout << TTY_CLEAR;
-						std::cout << "failed to open file, try again\n\n";
+						std::cout << "failed to open file, try again" << std::endl << std::endl;
 						unload(game);
 						continue;
 				}
@@ -535,12 +535,12 @@ int run(game_t &game)
 				{
 					case ENOENT:
 						std::cout << TTY_CLEAR;
-						std::cout << "failed to open file, try again\n";
+						std::cout << "failed to open file, try again" << std::endl;
 						unload(game);
 						continue;
 					case ENODATA:
 						std::cout << TTY_CLEAR;
-						std::cout << "cannot save uninitialized game\n"; // fatal
+						std::cout << "cannot save uninitialized game" << std::endl; // fatal
 						return 1;
 				}
 				std::cout << TTY_CLEAR;
@@ -551,7 +551,7 @@ int run(game_t &game)
 				{
 					case EINVAL:
 						std::cout << TTY_CLEAR;
-						std::cout << "invalid input, try again\n\n";
+						std::cout << "invalid input, try again" << std::endl << std::endl;
 						continue;
 					case ECANCELED:
 						std::cout << TTY_CLEAR;
@@ -564,7 +564,7 @@ int run(game_t &game)
 				{
 					case EINVAL:
 						std::cout << TTY_CLEAR;
-						std::cout << "invalid input, try again\n\n";
+						std::cout << "invalid input, try again" << std::endl << std::endl;
 						continue;
 					case ECANCELED:
 						std::cout << TTY_CLEAR;
@@ -577,11 +577,11 @@ int run(game_t &game)
 				{
 					case EINVAL:
 						std::cout << TTY_CLEAR;
-						std::cout << "invalid input, try again\n\n";
+						std::cout << "invalid input, try again" << std::endl << std::endl;
 						continue;
 					case EAGAIN:
 						std::cout << TTY_CLEAR;
-						std::cout << "the selected character is non-printable or whitespace, try again\n\n";
+						std::cout << "the selected character is non-printable or whitespace, try again" << std::endl << std::endl;
 						continue;
 					case ECANCELED:
 						std::cout << TTY_CLEAR;
