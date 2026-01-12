@@ -68,34 +68,38 @@ char *readline()
 {
 	std::cin >> std::ws; // switch from formatted to unformatted input (clear stdin from whitespaces)
 
-	int capacity = 100;
-	int index = 0;
-
-	char *buffer = new char[capacity];
+	int len = 0;
+	int cap = 100;
+	char *buffer = new char[cap];
 	char x;
 
 	do 
 	{
-		x = getchar();
-		buffer[index++] = x;
-
-		if (index == capacity) 
+		if (len >= cap) 
 		{
-			int newCapacity = capacity * 2;
-			char *newBuffer = (char*)memcopy(new char[newCapacity], buffer, capacity);
+			int cap2 = cap * 2;
+			char *buffer2 = (char*)memcopy(new char[cap2], buffer, cap);
 
 			delete[] buffer;
 
-			capacity = newCapacity;
-			buffer = newBuffer;
+			buffer = buffer2;
+			cap = cap2;
+
+			continue;
 		}
+
+		x = getchar();
+		buffer[len++] = x;
 	} while (x != '\r' && x != '\n' && x != EOF);
 
-	index--; // remove delim char
+	len--;
 
-	char *line = (char*)memcopy(new char[index + 1], buffer, index);
-	line[index + 1] = 0;
+	char *line = new char[len + 1];
+	line[len] = 0;
+	
+	memcopy(line, buffer, len);
 
+	delete[] buffer;
 	return line;
 }
 
@@ -176,11 +180,14 @@ int splitWords(const char *str, int *indices, int *lengths)
 
 	while (str[index] != 0) 
 	{
-		for (; isAsciiWhiteSpace(str[index]); index++);
+		while (isAsciiWhiteSpace(str[index]) && str[index]) index++;
 		indices[word] = index;
 
-		for (; !isAsciiWhiteSpace(str[index]); index++);
+		while (!isAsciiWhiteSpace(str[index]) && str[index]) index++;
 		lengths[word] = index - indices[word];
+
+		if (lengths[word] == 0)
+			continue;
 
 		word++;
 	}
