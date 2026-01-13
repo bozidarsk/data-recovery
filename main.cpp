@@ -16,19 +16,18 @@
 
 #include <iostream>
 #include <fstream>
+#include <cstring>
 
 typedef struct 
 {
-	const unsigned int seed;
-	const int textLength;
+	unsigned int seed;
+	int textLength;
 	bool isLoaded;
 	int state, mistakes, wordStart, wordLength, charIndex;
 
 	char headerEnd;
 
-	const char *const text;
-	const char *const corruptedText;
-	char *const workingText;
+	char *text, *corruptedText, *workingText;
 } game_t;
 
 const char 
@@ -53,13 +52,18 @@ bool isAsciiLetter(char x) { return (x >= 'a' && x <= 'z') || (x >= 'A' && x <= 
 bool isAsciiPrintable(char x) { return x > 0x1f && x < 0x7f; }
 bool isAsciiWhiteSpace(char x) { return x == ' ' || x == '\n' || x == '\r' || x == '\t' || x == '\0'; }
 
-void *memcopy(void *dest, const void *src, size_t size) 
+char *strncopy(char *dest, const char *src, size_t dsize) 
 {
 	if (!dest || !src)
 		return dest;
 
-	for (size_t i = 0; i < size; i++)
-		((char*)dest)[i] = ((char*)src)[i];
+	size_t i;
+
+	for (i = 0; i < dsize && src[i] != '\0'; i++)
+		dest[i] = src[i];
+
+	while (i < dsize)
+		dest[i++] = '\0';
 
 	return dest;
 }
@@ -212,7 +216,7 @@ char *readline()
 		if (len >= cap) 
 		{
 			size_t cap2 = cap * 2;
-			char *buffer2 = (char*)memcopy(new char[cap2], buffer, cap);
+			char *buffer2 = strncopy(new char[cap2], buffer, cap);
 
 			delete[] buffer;
 
@@ -239,7 +243,7 @@ char *readline()
 	char *line = new char[len + 1];
 	line[len] = '\0';
 	
-	memcopy(line, buffer, len);
+	strncopy(line, buffer, len);
 
 	delete[] buffer;
 	return line;
@@ -389,31 +393,26 @@ int load(game_t &game)
 	file.read(text, textLength);
 	text[textLength] = '\0';
 
-	game_t header = 
-	{
-		.seed = (unsigned int)time(NULL),
-		.textLength = textLength,
-		.state = STATE_WORD_SELECTION,
-		.mistakes = 0,
-		.wordStart = -1,
-		.wordLength = -1,
-		.charIndex = -1
-	};
+	game.seed = time(NULL);
+	game.textLength = textLength;
+	game.state = STATE_WORD_SELECTION;
+	game.mistakes = 0;
+	game.wordStart = -1;
+	game.wordLength = -1;
+	game.charIndex = -1;
 
 	char *corruptedText = new char[textLength + 1];
-	memcopy(corruptedText, text, textLength + 1);
+	strncopy(corruptedText, text, textLength + 1);
 
-	srand(header.seed);
+	srand(game.seed);
 	corrupt(corruptedText, corruptionRate * 100.0);
 
 	char *workingText = new char[textLength + 1];
-	memcopy(workingText, corruptedText, textLength + 1);
+	strncopy(workingText, corruptedText, textLength + 1);
 
-	memcopy(&game, &header, (char*)&game.headerEnd - (char*)&game);
-
-	*(char**)(&game.text) = text;
-	*(char**)(&game.corruptedText) = corruptedText;
-	*(char**)(&game.workingText) = workingText;
+	game.text = text;
+	game.corruptedText = corruptedText;
+	game.workingText = workingText;
 
 	game.isLoaded = true;
 
@@ -441,13 +440,13 @@ int loadfile(game_t &game)
 
 	file.read((char*)&game, (char*)&game.headerEnd - (char*)&game);
 
-	*(char**)(&game.text) = new char[game.textLength + 1];
-	*(char**)(&game.corruptedText) = new char[game.textLength + 1];
-	*(char**)(&game.workingText) = new char[game.textLength + 1];
+	game.text = new char[game.textLength + 1];
+	game.corruptedText = new char[game.textLength + 1];
+	game.workingText = new char[game.textLength + 1];
 
-	file.read((char*)game.text, game.textLength + 1);
-	file.read((char*)game.corruptedText, game.textLength + 1);
-	file.read((char*)game.workingText, game.textLength + 1);
+	file.read(game.text, game.textLength + 1);
+	file.read(game.corruptedText, game.textLength + 1);
+	file.read(game.workingText, game.textLength + 1);
 
 	game.isLoaded = true;
 
