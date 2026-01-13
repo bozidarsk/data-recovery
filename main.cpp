@@ -237,7 +237,7 @@ char *readline()
 		len--;
 
 	char *line = new char[len + 1];
-	line[len] = 0;
+	line[len] = '\0';
 	
 	memcopy(line, buffer, len);
 
@@ -266,7 +266,7 @@ int splitWords(const char *str, int *indices, int *lengths)
 
 	int word = 0, index = 0;
 
-	while (str[index] != 0) 
+	while (str[index] != '\0') 
 	{
 		while (isAsciiWhiteSpace(str[index]) && str[index] != '\0') index++;
 		indices[word] = index;
@@ -288,7 +288,7 @@ void corrupt(char *text, int percentage)
 	if (!text || percentage < 0 || percentage > 100)
 		return;
 
-	for (int i = 0; text[i] != 0; i++) 
+	for (int i = 0; text[i] != '\0'; i++) 
 	{
 		if (rand() % 100 >= percentage || !isAsciiLetter(text[i]))
 			continue;
@@ -387,7 +387,7 @@ int load(game_t &game)
 	int textLength = getstreamsize(file);
 	char *text = new char[textLength + 1];
 	file.read(text, textLength);
-	text[textLength] = 0;
+	text[textLength] = '\0';
 
 	game_t header = 
 	{
@@ -601,7 +601,7 @@ int charModificationState(game_t &game)
 	if (newCharIndex < 1 || newCharIndex > 6)
 		return EINVAL;
 
-	x = (newCharIndex--) ? (x ^ (1 << newCharIndex)) : 0;
+	x = (newCharIndex-- > 0) ? (x ^ (1 << newCharIndex)) : '\0';
 
 	if (!isAsciiPrintable(x) || x == ' ')
 		return EAGAIN;
