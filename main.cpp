@@ -64,14 +64,148 @@ void *memcopy(void *dest, const void *src, size_t size)
 	return dest;
 }
 
+bool tryparse(const char *str, int *result) 
+{
+	if (!str || !result)
+		return false;
+
+	bool isNegative = str[0] == '-';
+	*result = 0;
+
+	for (int i = (isNegative || str[0] == '+') ? 1 : 0; str[i] != '\0'; i++) 
+	{
+		if (str[i] < '0' || str[i] > '9')
+			return false;
+
+		*result *= 10;
+		*result += str[i] - '0';
+	}
+
+	if (isNegative)
+		*result = -(*result);
+
+	return true;
+}
+
+bool tryparse(const char *str, double *result) 
+{
+	if (!str || !result)
+		return false;
+
+	bool isNegative = str[0] == '-';
+	*result = 0.0;
+
+	int fractionOffset = 1;
+	bool parseFraction = false;
+	bool parseExponent = false;
+	int exponent = 0;
+
+	for (int i = (isNegative || str[0] == '+') ? 1 : 0; str[i] != '\0'; i++) 
+	{
+
+		if (str[i] == '.') 
+		{
+			if (parseFraction)
+				return false;
+
+			parseFraction = true;
+			continue;
+		}
+
+		if (str[i] == 'e' || str[i] == 'E') 
+		{
+			if (parseExponent)
+				return false;
+
+			parseExponent = true;
+			parseFraction = false;
+			continue;
+		}
+
+		if (!parseExponent && (str[i] < '0' || str[i] > '9'))
+			return false;
+
+		if (parseExponent && (str[i] != '-' && str[i] != '+') && (str[i] < '0' || str[i] > '9'))
+			return false;
+
+		if (!parseFraction && !parseExponent) 
+		{
+			*result *= 10.0;
+			*result += str[i] - '0';
+		}
+		else if (parseFraction && !parseExponent) 
+		{
+			double fraction = str[i] - '0';
+
+			for (int i = 0; i < fractionOffset; i++)
+				fraction /= 10.0;
+
+			*result += fraction;
+			fractionOffset++;
+		}
+		else if (!parseFraction && parseExponent) 
+		{
+			if (!tryparse(str + i, &exponent))
+				return false;
+
+			break;
+		}
+		else return false; // unreachable
+	}
+
+	int e = (exponent < 0) ? -exponent : exponent;
+	for (int i = 0; i < e; i++) 
+	{
+		if (exponent > 0)
+			*result *= 10.0;
+		else
+			*result /= 10.0;
+	}
+
+	if (isNegative)
+		*result = -(*result);
+
+	return true;
+}
+
+// same as tryparse but frees heap-allocated string input
+bool tryparse2(const char *str, int *result) 
+{
+	if (!str)
+		return false;
+
+	bool success = tryparse(str, result);
+	delete[] str;
+	return success;
+}
+
+// same as tryparse but frees heap-allocated string input
+bool tryparse2(const char *str, double *result) 
+{
+	if (!str)
+		return false;
+
+	bool success = tryparse(str, result);
+	delete[] str;
+	return success;
+}
+
 char *readline() 
 {
-	std::cin >> std::ws; // switch from formatted to unformatted input (clear stdin from whitespaces)
-
 	size_t len = 0;
 	size_t cap = 100;
 	char *buffer = new char[cap];
 	char x;
+
+	// clear stdin from leading newlines (not consumed by previous std::cin)
+	// will not work always (example: ' +-?[0-9]+ *\n+test\.txt\n+')
+	//     readline will start at the spaces before the integer
+	//     which no longer exists - it is consumed by cin using formatted input
+	//     and the rest of the whitespaces will be left out inside stdin buffer
+	//     and readline will continue fowrard untill it encounters a newline
+	//     which will be the one after the spaces after the integer
+	//     so the returned string will consist of the spaces before/after the integer
+	// for (x = std::cin.peek(); x == '\r' || x == '\n'; x = std::cin.peek()) x = getchar();
 
 	do 
 	{
@@ -90,9 +224,16 @@ char *readline()
 
 		x = getchar();
 		buffer[len++] = x;
-	} while (x != '\r' && x != '\n' && x != EOF);
+	} while (x != '\n' && x != EOF); // on windows LF is the last byte forming the newline
 
+	// remove the delim char, because it is consumed too
 	if (len != 0)
+		len--;
+
+	// on windows newlines are formed by CR followed by LF
+	// the LF is consumed and removed from the buffer by the previous if
+	// which leaves the CR still in the buffer - remove it
+	if (len != 0 && buffer[len - 1] == '\r')
 		len--;
 
 	char *line = new char[len + 1];
@@ -229,7 +370,12 @@ int load(game_t &game)
 
 	double corruptionRate;
 	std::cout << "corruption rate (between 0 and 1): ";
-	std::cin >> corruptionRate;
+	if (!tryparse(readline(), &corruptionRate)) 
+	{
+		file.close();
+		delete[] path;
+		return EINVAL;
+	}
 
 	if (corruptionRate < 0.0 || corruptionRate > 1.0) 
 	{
@@ -348,7 +494,7 @@ int menuState(game_t &game)
 	std::cout << "choice: ";
 
 	int x;
-	std::cin >> x;
+	if (!tryparse2(readline(), &x)) return EINVAL;
 	std::cout << std::endl;
 
 	switch (x) 
@@ -377,7 +523,7 @@ int wordSelectionState(game_t &game)
 
 	int word;
 	std::cout << std::endl << std::endl << "Enter the number of the word you wish to inspect (0 to cancel): ";
-	std::cin >> word;
+	if (!tryparse2(readline(), &word)) return EINVAL;
 
 	word--;
 
@@ -414,7 +560,7 @@ int charSelectionState(game_t &game)
 	printText(game, game.wordStart, game.wordLength);
 
 	std::cout << std::endl << std::endl << "Enter the number of the character in this word you wish to inspect (0 to cancel): ";
-	std::cin >> game.charIndex;
+	if (!tryparse2(readline(), &game.charIndex)) return EINVAL;
 
 	if (game.charIndex == 0)
 		return ECANCELED;
@@ -447,7 +593,7 @@ int charModificationState(game_t &game)
 
 	int newCharIndex;
 	std::cout << "Your choice: ";
-	std::cin >> newCharIndex;
+	if (!tryparse2(readline(), &newCharIndex)) return EINVAL;
 
 	if (newCharIndex == 0)
 		return ECANCELED;
