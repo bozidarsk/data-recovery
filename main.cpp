@@ -748,7 +748,7 @@ int run(game_t &game)
 
 int main() 
 {
-	game_t game = {0};
+	game_t game;
 	game.state = STATE_MENU;
 
 	int code = run(game);
