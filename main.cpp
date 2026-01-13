@@ -749,5 +749,10 @@ int main()
 	game_t game = {0};
 	game.state = STATE_MENU;
 
-	return run(game);
+	int code = run(game);
+
+	if (game.isLoaded)
+		unload(game);
+
+	return code;
 }
