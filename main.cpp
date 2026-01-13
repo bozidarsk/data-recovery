@@ -750,6 +750,8 @@ int main()
 {
 	game_t game;
 	game.state = STATE_MENU;
+	game.isLoaded = false;
+	game.textLength = 0;
 
 	int code = run(game);
 
