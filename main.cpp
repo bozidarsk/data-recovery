@@ -587,8 +587,11 @@ int charModificationState(game_t &game)
 	int textOffset = game.wordStart + game.charIndex - 1;
 
 	char x = game.workingText[textOffset];
-	for (int i = 0; i < 6; i++)
-		std::cout << (i + 1) << ") " << (char)(x ^ (1 << i)) << std::endl;
+	for (int i = 0; i < 6; i++) 
+	{
+		char newChar = x ^ (1 << i);
+		std::cout << (i + 1) << ") " << newChar << std::endl;
+	}
 
 	int newCharIndex;
 	std::cout << "Your choice: ";
