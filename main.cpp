@@ -18,7 +18,7 @@
 #include <fstream>
 #include <ctime>
 
-typedef struct 
+struct game_t 
 {
 	unsigned int seed;
 	int textLength;
@@ -28,7 +28,7 @@ typedef struct
 	char headerEnd;
 
 	char *text, *corruptedText, *workingText;
-} game_t;
+};
 
 const char 
 	*TTY_CLEAR = "\x1b[H\x1b[2J\x1b[3J",
