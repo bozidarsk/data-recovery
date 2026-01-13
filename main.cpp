@@ -16,7 +16,7 @@
 
 #include <iostream>
 #include <fstream>
-#include <cstring>
+#include <ctime>
 
 typedef struct 
 {
@@ -294,14 +294,14 @@ void corrupt(char *text, int percentage)
 
 	for (int i = 0; text[i] != '\0'; i++) 
 	{
-		if (rand() % 100 >= percentage || !isAsciiLetter(text[i]))
+		if (std::rand() % 100 >= percentage || !isAsciiLetter(text[i]))
 			continue;
 
 		char x;
 
 		do 
 		{
-			int bit = rand() % 6;
+			int bit = std::rand() % 6;
 			x = text[i] ^ (1 << bit);
 		} while (!isAsciiPrintable(x) || x == ' ');
 
@@ -393,7 +393,7 @@ int load(game_t &game)
 	file.read(text, textLength);
 	text[textLength] = '\0';
 
-	game.seed = time(NULL);
+	game.seed = std::time(0);
 	game.textLength = textLength;
 	game.state = STATE_WORD_SELECTION;
 	game.mistakes = 0;
@@ -404,7 +404,7 @@ int load(game_t &game)
 	char *corruptedText = new char[textLength + 1];
 	strncopy(corruptedText, text, textLength + 1);
 
-	srand(game.seed);
+	std::srand(game.seed);
 	corrupt(corruptedText, corruptionRate * 100.0);
 
 	char *workingText = new char[textLength + 1];
@@ -617,7 +617,7 @@ int run(game_t &game)
 {
 	std::cout << TTY_CLEAR;
 
-	srand(game.seed);
+	std::srand(game.seed);
 
 	for (;;) 
 	{
