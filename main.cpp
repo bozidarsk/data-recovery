@@ -28,6 +28,16 @@ struct game_t
 	char *text, *corruptedText, *workingText;
 };
 
+enum status_t 
+{
+	SUCCESS = 0,
+	AGAIN,
+	CANCELED,
+	INVAL,
+	NODATA,
+	NOENT,
+};
+
 const int GAME_HEADER_SIZE = sizeof(game_t) - 3*sizeof(char*);
 
 const char 
@@ -336,10 +346,10 @@ void printText(game_t &game, int index, int length)
 	std::cout << TTY_DEFAULT;
 }
 
-int unload(game_t &game) 
+status_t unload(game_t &game) 
 {
 	if (!game.isLoaded)
-		return ENODATA;
+		return NODATA;
 
 	if (game.text)
 		delete[] game.text;
@@ -352,10 +362,10 @@ int unload(game_t &game)
 
 	game.isLoaded = false;
 
-	return 0;
+	return SUCCESS;
 }
 
-int load(game_t &game) 
+status_t load(game_t &game) 
 {
 	if (game.isLoaded)
 		unload(game);
@@ -369,7 +379,7 @@ int load(game_t &game)
 	{
 		file.close();
 		delete[] path;
-		return ENOENT;
+		return NOENT;
 	}
 
 	double corruptionRate;
@@ -378,14 +388,14 @@ int load(game_t &game)
 	{
 		file.close();
 		delete[] path;
-		return EINVAL;
+		return INVAL;
 	}
 
 	if (corruptionRate < 0.0 || corruptionRate > 1.0) 
 	{
 		file.close();
 		delete[] path;
-		return EINVAL;
+		return INVAL;
 	}
 
 	int textLength = getstreamsize(file);
@@ -418,10 +428,10 @@ int load(game_t &game)
 
 	file.close();
 	delete[] path;
-	return 0;
+	return SUCCESS;
 }
 
-int loadfile(game_t &game) 
+status_t loadfile(game_t &game) 
 {
 	if (game.isLoaded)
 		unload(game);
@@ -435,7 +445,7 @@ int loadfile(game_t &game)
 	{
 		file.close();
 		delete[] path;
-		return ENOENT;
+		return NOENT;
 	}
 
 	file.read((char*)&game, GAME_HEADER_SIZE);
@@ -452,13 +462,13 @@ int loadfile(game_t &game)
 
 	file.close();
 	delete[] path;
-	return 0;
+	return SUCCESS;
 }
 
-int savefile(const game_t &game) 
+status_t savefile(const game_t &game) 
 {
 	if (!game.isLoaded)
-		return ENODATA;
+		return NODATA;
 
 	std::cout << "path: ";
 	char *path = readline();
@@ -469,7 +479,7 @@ int savefile(const game_t &game)
 	{
 		file.close();
 		delete[] path;
-		return ENOENT;
+		return NOENT;
 	}
 
 	file.write((const char*)&game, GAME_HEADER_SIZE);
@@ -480,10 +490,10 @@ int savefile(const game_t &game)
 
 	file.close();
 	delete[] path;
-	return 0;
+	return SUCCESS;
 }
 
-int menuState(game_t &game) 
+status_t menuState(game_t &game) 
 {
 	std::cout << "what do you want to do?" << std::endl;
 	std::cout << "1) load game from stdin (create a new game)" << std::endl;
@@ -493,7 +503,7 @@ int menuState(game_t &game)
 	std::cout << "choice: ";
 
 	int x;
-	if (!tryparse2(readline(), &x)) return EINVAL;
+	if (!tryparse2(readline(), &x)) return INVAL;
 	std::cout << std::endl;
 
 	switch (x) 
@@ -508,29 +518,29 @@ int menuState(game_t &game)
 			game.state = STATE_SAVE_FILE;
 			break;
 		case 4:
-			return ECANCELED;
+			return CANCELED;
 		default:
-			return EINVAL;
+			return INVAL;
 	}
 
-	return 0;
+	return SUCCESS;
 }
 
-int wordSelectionState(game_t &game) 
+status_t wordSelectionState(game_t &game) 
 {
 	printText(game, 0, game.textLength);
 
 	int word;
 	std::cout << std::endl << std::endl << "Enter the number of the word you wish to inspect (0 to cancel): ";
-	if (!tryparse2(readline(), &word)) return EINVAL;
+	if (!tryparse2(readline(), &word)) return INVAL;
 
 	word--;
 
 	if (word == -1)
-		return ECANCELED;
+		return CANCELED;
 
 	if (word < 0)
-		return EINVAL;
+		return INVAL;
 
 	int *indices = new int[game.textLength];
 	int *lengths = new int[game.textLength];
@@ -539,7 +549,7 @@ int wordSelectionState(game_t &game)
 	{
 		delete[] indices;
 		delete[] lengths;
-		return EINVAL;
+		return INVAL;
 	}
 
 	game.wordStart = indices[word];
@@ -547,10 +557,10 @@ int wordSelectionState(game_t &game)
 
 	delete[] indices;
 	delete[] lengths;
-	return 0;
+	return SUCCESS;
 }
 
-int charSelectionState(game_t &game) 
+status_t charSelectionState(game_t &game) 
 {
 	printText(game, 0, game.textLength);
 
@@ -559,15 +569,15 @@ int charSelectionState(game_t &game)
 	printText(game, game.wordStart, game.wordLength);
 
 	std::cout << std::endl << std::endl << "Enter the number of the character in this word you wish to inspect (0 to cancel): ";
-	if (!tryparse2(readline(), &game.charIndex)) return EINVAL;
+	if (!tryparse2(readline(), &game.charIndex)) return INVAL;
 
 	if (game.charIndex == 0)
-		return ECANCELED;
+		return CANCELED;
 
-	return (game.charIndex >= 1 && game.charIndex <= game.wordLength) ? 0 : EINVAL;
+	return (game.charIndex >= 1 && game.charIndex <= game.wordLength) ? SUCCESS : INVAL;
 }
 
-int charModificationState(game_t &game) 
+status_t charModificationState(game_t &game) 
 {
 	printText(game, 0, game.textLength);
 
@@ -595,28 +605,28 @@ int charModificationState(game_t &game)
 
 	int newCharIndex;
 	std::cout << "Your choice: ";
-	if (!tryparse2(readline(), &newCharIndex)) return EINVAL;
+	if (!tryparse2(readline(), &newCharIndex)) return INVAL;
 
 	if (newCharIndex == 0)
-		return ECANCELED;
+		return CANCELED;
 
 	if (newCharIndex < 1 || newCharIndex > 6)
-		return EINVAL;
+		return INVAL;
 
 	x = (newCharIndex-- > 0) ? (x ^ (1 << newCharIndex)) : '\0';
 
 	if (!isAsciiPrintable(x) || x == ' ')
-		return EAGAIN;
+		return AGAIN;
 
 	game.workingText[textOffset] = x;
 
 	if (game.text[textOffset] != x)
 		game.mistakes++;
 
-	return 0;
+	return SUCCESS;
 }
 
-int run(game_t &game) 
+status_t run(game_t &game) 
 {
 	std::cout << TTY_CLEAR;
 
@@ -643,23 +653,23 @@ int run(game_t &game)
 			case STATE_MENU:
 				switch (menuState(game)) 
 				{
-					case EINVAL:
+					case INVAL:
 						std::cout << TTY_CLEAR;
 						std::cout << "invalid input, try again" << std::endl << std::endl;
 						break;
-					case ECANCELED:
-						return 0;
+					case CANCELED:
+						return SUCCESS;
 				}
 				continue;
 			case STATE_LOAD:
 				switch (load(game)) 
 				{
-					case ENOENT:
+					case NOENT:
 						std::cout << TTY_CLEAR;
 						std::cout << "failed to open file, try again" << std::endl << std::endl;
 						unload(game);
 						continue;
-					case EINVAL:
+					case INVAL:
 						std::cout << TTY_CLEAR;
 						std::cout << "invalid input, try again" << std::endl << std::endl;
 						unload(game);
@@ -670,7 +680,7 @@ int run(game_t &game)
 			case STATE_LOAD_FILE:
 				switch (loadfile(game)) 
 				{
-					case ENOENT:
+					case NOENT:
 						std::cout << TTY_CLEAR;
 						std::cout << "failed to open file, try again" << std::endl << std::endl;
 						unload(game);
@@ -681,15 +691,15 @@ int run(game_t &game)
 			case STATE_SAVE_FILE:
 				switch (savefile(game)) 
 				{
-					case ENOENT:
+					case NOENT:
 						std::cout << TTY_CLEAR;
 						std::cout << "failed to open file, try again" << std::endl;
 						unload(game);
 						continue;
-					case ENODATA:
+					case NODATA:
 						std::cout << TTY_CLEAR;
 						std::cout << "cannot save uninitialized game" << std::endl; // fatal
-						return 1;
+						return NODATA;
 				}
 				std::cout << TTY_CLEAR;
 				game.state = STATE_MENU;
@@ -697,11 +707,11 @@ int run(game_t &game)
 			case STATE_WORD_SELECTION:
 				switch (wordSelectionState(game)) 
 				{
-					case EINVAL:
+					case INVAL:
 						std::cout << TTY_CLEAR;
 						std::cout << "invalid input, try again" << std::endl << std::endl;
 						continue;
-					case ECANCELED:
+					case CANCELED:
 						std::cout << TTY_CLEAR;
 						game.state--;
 						continue;
@@ -710,11 +720,11 @@ int run(game_t &game)
 			case STATE_CHAR_SELECTION:
 				switch (charSelectionState(game)) 
 				{
-					case EINVAL:
+					case INVAL:
 						std::cout << TTY_CLEAR;
 						std::cout << "invalid input, try again" << std::endl << std::endl;
 						continue;
-					case ECANCELED:
+					case CANCELED:
 						std::cout << TTY_CLEAR;
 						game.state--;
 						continue;
@@ -723,15 +733,15 @@ int run(game_t &game)
 			case STATE_CHAR_MODIFICATINO:
 				switch (charModificationState(game)) 
 				{
-					case EINVAL:
+					case INVAL:
 						std::cout << TTY_CLEAR;
 						std::cout << "invalid input, try again" << std::endl << std::endl;
 						continue;
-					case EAGAIN:
+					case AGAIN:
 						std::cout << TTY_CLEAR;
 						std::cout << "the selected character is non-printable or whitespace, try again" << std::endl << std::endl;
 						continue;
-					case ECANCELED:
+					case CANCELED:
 						std::cout << TTY_CLEAR;
 						game.state--;
 						continue;
@@ -743,7 +753,7 @@ int run(game_t &game)
 		std::cout << TTY_CLEAR;
 	}
 
-	return 0;
+	return SUCCESS;
 }
 
 int main() 
@@ -753,10 +763,10 @@ int main()
 	game.isLoaded = false;
 	game.textLength = 0;
 
-	int code = run(game);
+	status_t status = run(game);
 
 	if (game.isLoaded)
 		unload(game);
 
-	return code;
+	return status;
 }
