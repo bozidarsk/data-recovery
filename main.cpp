@@ -667,12 +667,12 @@ status_t run(game_t &game)
 					case NOENT:
 						std::cout << TTY_CLEAR;
 						std::cout << "failed to open file, try again" << std::endl << std::endl;
-						unload(game);
+						game.state = STATE_MENU;
 						continue;
 					case INVAL:
 						std::cout << TTY_CLEAR;
 						std::cout << "invalid input, try again" << std::endl << std::endl;
-						unload(game);
+						game.state = STATE_MENU;
 						continue;
 				}
 				game.state = STATE_WORD_SELECTION;
@@ -683,7 +683,7 @@ status_t run(game_t &game)
 					case NOENT:
 						std::cout << TTY_CLEAR;
 						std::cout << "failed to open file, try again" << std::endl << std::endl;
-						unload(game);
+						game.state = STATE_MENU;
 						continue;
 				}
 				game.state = STATE_WORD_SELECTION;
@@ -693,13 +693,14 @@ status_t run(game_t &game)
 				{
 					case NOENT:
 						std::cout << TTY_CLEAR;
-						std::cout << "failed to open file, try again" << std::endl;
-						unload(game);
+						std::cout << "failed to open file, try again" << std::endl << std::endl;
+						game.state = STATE_MENU;
 						continue;
 					case NODATA:
 						std::cout << TTY_CLEAR;
-						std::cout << "cannot save uninitialized game" << std::endl; // fatal
-						return NODATA;
+						std::cout << "cannot save uninitialized game, try again" << std::endl << std::endl;
+						game.state = STATE_MENU;
+						continue;
 				}
 				std::cout << TTY_CLEAR;
 				game.state = STATE_MENU;
