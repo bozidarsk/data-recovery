@@ -20,10 +20,8 @@
 
 struct game_t 
 {
-	unsigned int seed;
-	int textLength;
+	int textLength, state, mistakes, wordStart, wordLength, charIndex;
 	bool isLoaded;
-	int state, mistakes, wordStart, wordLength, charIndex;
 
 	char *text, *corruptedText, *workingText;
 };
@@ -403,7 +401,6 @@ status_t load(game_t &game)
 	file.read(text, textLength);
 	text[textLength] = '\0';
 
-	game.seed = std::time(0);
 	game.textLength = textLength;
 	game.state = STATE_WORD_SELECTION;
 	game.mistakes = 0;
@@ -414,7 +411,7 @@ status_t load(game_t &game)
 	char *corruptedText = new char[textLength + 1];
 	strncopy(corruptedText, text, textLength + 1);
 
-	std::srand(game.seed);
+	std::srand(std::time(0));
 	corrupt(corruptedText, corruptionRate * 100.0);
 
 	char *workingText = new char[textLength + 1];
@@ -630,8 +627,6 @@ status_t run(game_t &game)
 {
 	std::cout << TTY_CLEAR;
 
-	std::srand(game.seed);
-
 	for (;;) 
 	{
 		bool winning = game.isLoaded;
@@ -675,8 +670,9 @@ status_t run(game_t &game)
 						game.state = STATE_MENU;
 						continue;
 				}
+				std::cout << TTY_CLEAR;
 				game.state = STATE_WORD_SELECTION;
-				return run(game);
+				continue;
 			case STATE_LOAD_FILE:
 				switch (loadfile(game)) 
 				{
@@ -686,8 +682,9 @@ status_t run(game_t &game)
 						game.state = STATE_MENU;
 						continue;
 				}
+				std::cout << TTY_CLEAR;
 				game.state = STATE_WORD_SELECTION;
-				return run(game);
+				continue;
 			case STATE_SAVE_FILE:
 				switch (savefile(game)) 
 				{
