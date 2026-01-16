@@ -23,8 +23,10 @@ struct game_t
 	int textLength, state, mistakes, wordStart, wordLength, charIndex;
 	bool isLoaded;
 
+	char headerEnd;
+
 	char *text, *corruptedText, *workingText;
-} __attribute__((packed));
+};
 
 enum status_t 
 {
@@ -35,8 +37,6 @@ enum status_t
 	NODATA,
 	NOENT,
 };
-
-const int GAME_HEADER_SIZE = sizeof(game_t) - 3*sizeof(char*);
 
 const char 
 	*TTY_CLEAR = "\x1b[H\x1b[2J\x1b[3J",
@@ -445,7 +445,7 @@ status_t loadfile(game_t &game)
 		return NOENT;
 	}
 
-	file.read((char*)&game, GAME_HEADER_SIZE);
+	file.read((char*)&game, (char*)&game.headerEnd - (char*)&game);
 
 	game.text = new char[game.textLength + 1];
 	game.corruptedText = new char[game.textLength + 1];
@@ -479,7 +479,7 @@ status_t savefile(const game_t &game)
 		return NOENT;
 	}
 
-	file.write((const char*)&game, GAME_HEADER_SIZE);
+	file.write((const char*)&game, (char*)&game.headerEnd - (char*)&game);
 
 	file.write(game.text, game.textLength + 1);
 	file.write(game.corruptedText, game.textLength + 1);
