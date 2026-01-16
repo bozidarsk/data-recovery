@@ -24,7 +24,7 @@ struct game_t
 	bool isLoaded;
 
 	char *text, *corruptedText, *workingText;
-};
+} __attribute__((packed));
 
 enum status_t 
 {
@@ -565,8 +565,12 @@ status_t charSelectionState(game_t &game)
 
 	printText(game, game.wordStart, game.wordLength);
 
+	int index;
+
 	std::cout << std::endl << std::endl << "Enter the number of the character in this word you wish to inspect (0 to cancel): ";
-	if (!tryparse2(readline(), &game.charIndex)) return INVAL;
+	if (!tryparse2(readline(), &index)) return INVAL;
+
+	game.charIndex = index;
 
 	if (game.charIndex == 0)
 		return CANCELED;
