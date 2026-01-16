@@ -35,8 +35,7 @@ The game will then display **all 6 possible variants** of the selected character
 If you select a character:
 - The corrupted text is updated.
 - If the choice matches the original character, it is colored **green**.
-- If the choice does not match the original character, it is colored **red**.
-- Otherwise, the move counts as a **mistake**.
+- If the choice does not match the original character, it is colored **red**, and the move counts as a **mistake**.
 
 ### Winning the Game
 
