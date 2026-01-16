@@ -389,7 +389,7 @@ status_t load(game_t &game)
 		return INVAL;
 	}
 
-	if (corruptionRate < 0.0 || corruptionRate > 1.0) 
+	if (!(corruptionRate > 0.0 && corruptionRate < 1.0)) 
 	{
 		file.close();
 		delete[] path;
