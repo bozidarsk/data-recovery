@@ -382,7 +382,7 @@ status_t load(game_t &game)
 
 	double corruptionRate;
 	std::cout << "corruption rate (between 0 and 1): ";
-	if (!tryparse(readline(), &corruptionRate)) 
+	if (!tryparse2(readline(), &corruptionRate)) 
 	{
 		file.close();
 		delete[] path;
